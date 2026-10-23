@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ລະບົບປະເມີນພະນັກງານ (Employee Evaluation System)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Noto Sans Lao Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans Lao', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#1E40AF',
+                        secondary: '#0D9488',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans Lao', sans-serif;
+        }
+        /* Custom Loader styling for circle loader */
+        .loader-ring {
+            display: inline-block;
+            position: relative;
+            width: 110px;
+            height: 110px;
+        }
+        .loader-ring div {
+            box-sizing: border-box;
+            display: block;
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            margin: 10px;
+            border: 5px solid #3B82F6;
+            border-radius: 50%;
+            animation: loader-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+            border-color: #3B82F6 transparent transparent transparent;
+        }
+        .loader-ring div:nth-child(1) { animation-delay: -0.45s; }
+        .loader-ring div:nth-child(2) { animation-delay: -0.3s; }
+        .loader-ring div:nth-child(3) { animation-delay: -0.15s; }
+        @keyframes loader-ring {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Global Loading Overlay with Prominent Logo -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/75 backdrop-blur-md z-50 flex flex-col items-center justify-center hidden transition-opacity duration-300">
+        <div class="relative flex items-center justify-center">
+            <!-- Rotating Ring -->
+            <div class="loader-ring">
+                <div></div><div></div><div></div><div></div>
+            </div>
+            <!-- Center Prominent Logo Badge -->
+            <div class="absolute w-16 h-16 rounded-full bg-white p-1.5 ring-4 ring-white/30 shadow-2xl flex items-center justify-center overflow-hidden">
+                <img src="C:\Users\Banhom\Downloads\logoo.png" alt="Logo" class="w-full h-full object-contain">
+            </div>
+        </div>
+        <p id="loadingText" class="mt-5 text-white font-semibold text-base tracking-wide animate-pulse bg-white/10 px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/20">ກຳລັງໂຫຼດຂໍ້ມູນ...</p>
+    </div>
+
+    <!-- Alert Modal / Toast -->
+    <div id="modalAlert" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center transform transition-all relative">
+            <div id="modalIcon" class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"></div>
+            <h3 id="modalTitle" class="text-lg font-bold mb-2"></h3>
+            <p id="modalMessage" class="text-slate-600 text-sm mb-4"></p>
+            <button onclick="closeModal()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors text-sm">
+                ຕົກລົງ (OK)
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal (Pop up ຢືນຢັນກ່ອນບັນທຶກ) -->
+    <div id="modalConfirm" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center transform transition-all relative">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl bg-amber-100 text-amber-600">
+                <i class="fa-solid fa-circle-question"></i>
+            </div>
+            <h3 id="confirmTitle" class="text-lg font-bold mb-2 text-slate-800">ຢືນຢັນການບັນທຶກ</h3>
+            <p id="confirmMessage" class="text-slate-600 text-sm mb-6">ທ່ານຕ້ອງການບັນທຶກຜົນການປະເມີນນີ້ແທ້ ຫຼື ບໍ່?</p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirmModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-colors text-sm">
+                    ຍົກເລີກ
+                </button>
+                <button id="btnConfirmSubmit" onclick="submitEvaluationData()" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors text-sm shadow-md shadow-blue-500/20">
+                    ຕົກລົງບັນທຶກ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="flex-grow flex flex-col">
+
+        <!-- 1. LOGIN SCREEN -->
+        <section id="loginScreen" class="flex-grow flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200/80 w-full max-w-md p-6 sm:p-8">
+                <div class="text-center mb-6">
+                    <!-- Prominent Logo Container -->
+                    <div class="w-24 h-24 rounded-2xl bg-white border-2 border-slate-100 flex items-center justify-center mx-auto mb-4 shadow-md p-2 overflow-hidden transition-transform hover:scale-105">
+                        <img src="C:\Users\Banhom\Downloads\logoo.png" alt="Logo" class="w-full h-full object-contain">
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-800">ເຂົ້າສູ່ລະບົບປະເມີນ</h1>
+                    <p class="text-slate-500 text-sm mt-1">ກະລຸນາປ້ອນຂໍ້ມູນຜູ້ໃຊ້ເພື່ອເຂົ້າຮ່ວມການປະເມີນ</p>
+                </div>
+
+                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">ຊື່ຜູ້ໃຊ້ (Username)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                                <i class="fa-solid fa-user"></i>
+                            </span>
+                            <input type="text" id="loginUsername" required placeholder="ປ້ອນ username" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">ລະຫັດຜ່ານ (Password)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                                <i class="fa-solid fa-lock"></i>
+                            </span>
+                            <input type="password" id="loginPassword" required placeholder="ປ້ອນ password" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Remember 90 days checkbox & Forgot Password link -->
+                    <div class="flex items-center justify-between text-xs pt-1">
+                        <label class="flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-800 select-none">
+                            <input type="checkbox" id="rememberMe" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer">
+                            <span>ຈື່ຈຳການເຂົ້າສູ່ລະບົບ 90 ວັນ</span>
+                        </label>
+                        <button type="button" onclick="showAdminContactPopup()" class="text-blue-600 hover:underline font-medium">
+                            ລືມລະຫັດຜ່ານ?
+                        </button>
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 transition duration-150 flex items-center justify-center gap-2 mt-2">
+                        <span>ເຂົ້າສູ່ລະບົບ</span>
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    </button>
+                </form>
+
+                <!-- Note section below login button -->
+                <div class="mt-5 pt-4 border-t border-slate-100 text-center space-y-2">
+                    <button type="button" onclick="showAdminContactPopup()" class="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 transition bg-slate-50 hover:bg-blue-50 px-3 py-2 rounded-lg border border-slate-200/60 w-full justify-center">
+                        <i class="fa-solid fa-circle-info text-blue-500"></i>
+                        <span>Note: ຫາກພົບບັນຫາໃນການເຂົ້າສູ່ລະບົບ ກະລຸນາກົດບ່ອນນີ້</span>
+                    </button>
+                    <p class="text-xs text-slate-400 font-medium pt-1">
+                        Copy right @ L-jats by FM/IT
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. FORCE CHANGE PASSWORD SCREEN -->
+        <section id="changePasswordScreen" class="flex-grow flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-3xl shadow-xl border border-amber-200 w-full max-w-md p-6 sm:p-8">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800">ປ່ຽນລະຫັດຜ່ານຄັ້ງທຳອິດ</h2>
+                    <p class="text-amber-600 text-xs mt-1 bg-amber-50 py-1 px-3 rounded-full inline-block">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> ເພື່ອຄວາມປອດໄພ ທ່ານຕ້ອງປ່ຽນລະຫັດຜ່ານໃໝ່
+                    </p>
+                </div>
+
+                <form id="changePasswordForm" onsubmit="handleChangePassword(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">ລະຫັດຜ່ານໃໝ່</label>
+                        <input type="password" id="newPassword" minlength="4" required placeholder="ຢ່າງໜ້ອຍ 4 ຕົວອັກສອນ" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">ຢືນຢັນລະຫັດຜ່ານໃໝ່</label>
+                        <input type="password" id="confirmPassword" minlength="4" required placeholder="ປ້ອນລະຫັດຜ່ານໃໝ່ອີກຄັ້ງ" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-lg shadow-amber-500/20 transition duration-150">
+                        ບັນທຶກລະຫັດຜ່ານໃໝ່
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- 3. MAIN EVALUATION SCREEN -->
+        <section id="evaluationScreen" class="flex-grow flex flex-col hidden">
+            <!-- Header Nav -->
+            <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <!-- Prominent Header Logo -->
+                        <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center p-1 overflow-hidden">
+                            <img src="C:\Users\Banhom\Downloads\logoo.png" alt="Logo" class="w-full h-full object-contain">
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-slate-800 text-base leading-tight">ລະບົບປະເມີນພະນັກງານ</h1>
+                            <p class="text-xs text-slate-500">ຜູ້ປະເມີນ: <span id="currentUserDisplay" class="font-semibold text-blue-600">---</span></p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="fetchInitialData(true)" title="ໂຫຼດຂໍ້ມູນໃໝ່" class="p-2 sm:px-3 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-xl transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate"></i>
+                            <span class="hidden sm:inline">Refresh</span>
+                        </button>
+                        <button onclick="handleLogout()" title="ອອກຈາກລະບົບ" class="p-2 sm:px-3 sm:py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-medium rounded-xl transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span class="hidden sm:inline">Log out</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Container -->
+            <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left Column: Employee List Cards (Collapsible) -->
+                <div class="lg:col-span-5 flex flex-col space-y-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between cursor-pointer select-none" onclick="toggleEmployeeListCollapse()">
+                            <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                                <i class="fa-solid fa-users text-blue-600"></i>
+                                <span>ລາຍຊື່ພະນັກງານ</span>
+                            </h2>
+                            <div class="flex items-center gap-2">
+                                <span id="pendingBadge" class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-1 rounded-full">
+                                    -- / --
+                                </span>
+                                <button type="button" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition">
+                                    <i id="collapseIcon" class="fa-solid fa-chevron-down transition-transform duration-200"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Collapsible Container -->
+                        <div id="employeeListWrapper" class="mt-3 transition-all duration-300">
+                            <!-- Employee Cards Grid -->
+                            <div id="employeeList" class="space-y-3 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
+                                <!-- Employee Cards will be rendered dynamically here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Evaluation Form -->
+                <div class="lg:col-span-7 flex flex-col">
+                    <div id="formPlaceholder" class="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center flex flex-col items-center justify-center flex-grow min-h-[350px]">
+                        <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-3 text-2xl">
+                            <i class="fa-solid fa-clipboard-user"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-700 text-base">ກະລຸນາເລືອກພະນັກງານ</h3>
+                        <p class="text-slate-400 text-xs max-w-xs mt-1">ກົດເລືອກ Block ພະນັກງານຢູ່ດ້ານຊ້າຍ/ເທິງ ເພື່ອເລີ່ມຕົ້ນການປະເມີນ</p>
+                    </div>
+
+                    <div id="evaluationFormCard" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 flex-grow hidden flex-col">
+                        <!-- Selected Employee Banner -->
+                        <div id="evaluationHeaderBlock" class="border-b border-slate-100 pb-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 scroll-mt-20">
+                            <div>
+                                <span class="text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded">
+                                    <i class="fa-solid fa-id-card mr-1"></i><span id="evalEmpId">--</span>
+                                </span>
+                                <h2 id="evalEmpName" class="text-xl font-bold text-slate-800 mt-1">--</h2>
+                                <p id="evalEmpPos" class="text-xs text-slate-500">--</p>
+                            </div>
+                            <!-- Live Score Summary Badge -->
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-right flex sm:flex-col justify-between items-center sm:items-end">
+                                <span class="text-xs text-slate-500">ຄະແນນລວມສະເລ່ຍ:</span>
+                                <span id="totalScoreDisplay" class="text-2xl font-black text-blue-600">0 / 100</span>
+                            </div>
+                        </div>
+
+                        <!-- Readonly View Banner if already evaluated -->
+                        <div id="alreadyEvaluatedBanner" class="hidden bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl p-3 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+                            <span>ພະນັກງານຄົນນີ້ໄດ້ຮັບການປະເມີນແລ້ວ. ທ່ານສາມາດເບິ່ງຜົນການປະເມີນໄດ້ເທົ່ານັ້ນ (ບໍ່ສາມາດແກ້ໄຂໄດ້).</span>
+                        </div>
+
+                        <!-- Questions List Form -->
+                        <form id="evalForm" onsubmit="handleSaveEvaluation(event)" class="space-y-6 flex-grow overflow-y-auto pr-1">
+                            <div id="questionsContainer" class="space-y-6">
+                                <!-- Dynamic evaluation lists will go here -->
+                            </div>
+
+                            <!-- Comment Field -->
+                            <div class="pt-2 border-t border-slate-100">
+                                <label class="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-comment-dots text-slate-400"></i>
+                                    <span>ຄຳເຫັນເພີ່ມເຕີມ (Comment):</span>
+                                </label>
+                                <textarea id="evalComment" rows="3" placeholder="ປ້ອນຄຳເຫັນ ຫຼື ຂໍ້ສະເໜີແນະເພີ່ມເຕີມ..." class="w-full p-3 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none transition"></textarea>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div id="submitButtonWrapper" class="pt-2">
+                                <button type="submit" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-floppy-disk"></i>
+                                    <span>ບັນທຶກຜົນການປະເມີນ</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </main>
+
+            <!-- Footer -->
+            <footer class="bg-white border-t border-slate-200 mt-auto py-3 px-4 text-center">
+                <p class="text-xs text-slate-500 font-medium">
+                    Copy right @ L-jats by FM/IT
+                </p>
+            </footer>
+        </section>
+
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        // --- CONSTANTS & STATE ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsUxmzWjRTfElxMlnv44kLIYWhkOziPxgIsNEuG_pLu8Kc5sJoWkv8gSqDKWWb8Wxoqg/exec";
+        
+        let currentUser = null; 
+        let employeesData = [];
+        let listsData = [];
+        let evaluationHistory = []; 
+        let selectedEmployee = null;
+        let userIpAddress = "127.0.0.1";
+        let pendingSavePayload = null; // ເກັບຂໍ້ມູນຊົ່ວຄາວສຳລັບການບັນທຶກ
+        
+        let modalTimer = null;
+        let silentPollInterval = null;
+
+        const SCORE_OPTIONS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+        // --- INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchUserIp();
+            checkSavedSession();
+        });
+
+        async function fetchUserIp() {
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                const data = await res.json();
+                userIpAddress = data.ip || '127.0.0.1';
+            } catch (e) {
+                userIpAddress = '127.0.0.1';
+            }
+        }
+
+        // --- SESSION MANAGEMENT ---
+        function checkSavedSession() {
+            let saved = localStorage.getItem('eval_user_90days');
+            
+            if (!saved) {
+                saved = sessionStorage.getItem('eval_user');
+            } else {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.expiry && new Date().getTime() > parsed.expiry) {
+                        localStorage.removeItem('eval_user_90days');
+                        saved = null;
+                    } else {
+                        currentUser = parsed.userData;
+                    }
+                } catch (e) {
+                    localStorage.removeItem('eval_user_90days');
+                    saved = null;
+                }
+            }
+
+            if (saved && currentUser) {
+                if (currentUser.is_first_login) {
+                    showScreen('changePasswordScreen');
+                } else {
+                    document.getElementById('currentUserDisplay').textContent = currentUser.username;
+                    toggleLoader(true, 'ກຳລັງໂຫຼດຂໍ້ມູນເຂົ້າສູ່ລະບົບ...');
+                    fetchInitialData().then(() => {
+                        toggleLoader(false);
+                        showScreen('evaluationScreen');
+                        startSilentPolling();
+                    });
+                }
+            } else {
+                showScreen('loginScreen');
+            }
+        }
+
+        function saveUserSession(userData, remember90Days = false) {
+            currentUser = userData;
+            if (remember90Days) {
+                const expiryTime = new Date().getTime() + (90 * 24 * 60 * 60 * 1000);
+                const record = { userData: userData, expiry: expiryTime };
+                localStorage.setItem('eval_user_90days', JSON.stringify(record));
+            } else {
+                sessionStorage.setItem('eval_user', JSON.stringify(userData));
+            }
+        }
+
+        function showScreen(screenId) {
+            ['loginScreen', 'changePasswordScreen', 'evaluationScreen'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function toggleLoader(show, text = 'ກຳລັງໂຫຼດຂໍ້ມູນ...') {
+            const overlay = document.getElementById('loadingOverlay');
+            document.getElementById('loadingText').textContent = text;
+            if (show) {
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function showModal(title, message, isSuccess = true, autoCloseSeconds = 0) {
+            closeModal();
+
+            const modal = document.getElementById('modalAlert');
+            const icon = document.getElementById('modalIcon');
+
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+
+            if (isSuccess) {
+                icon.className = "w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl bg-emerald-100 text-emerald-600";
+                icon.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
+            } else {
+                icon.className = "w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl bg-rose-100 text-rose-600";
+                icon.innerHTML = `<i class="fa-solid fa-circle-xmark"></i>`;
+            }
+
+            if (autoCloseSeconds > 0) {
+                modalTimer = setTimeout(() => {
+                    closeModal();
+                }, autoCloseSeconds * 1000);
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modalAlert').classList.add('hidden');
+            if (modalTimer) {
+                clearTimeout(modalTimer);
+                modalTimer = null;
+            }
+        }
+
+        // --- CONFIRMATION MODAL FUNCTIONS ---
+        function showConfirmModal(message) {
+            document.getElementById('confirmMessage').textContent = message;
+            document.getElementById('modalConfirm').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('modalConfirm').classList.add('hidden');
+        }
+
+        function showAdminContactPopup() {
+            showModal("ແຈ້ງເຕືອນ", "ພົວພັນບໍລິຫານ", false, 5);
+        }
+
+        async function apiCall(action, payload = {}) {
+            try {
+                const params = new URLSearchParams({ action, ...payload });
+                const response = await fetch(`${SCRIPT_URL}?${params.toString()}`);
+                return await response.json();
+            } catch (err) {
+                console.error("API Error:", err);
+                return { success: false, message: "ບໍ່ສາມາດເຊື່ອມຕໍ່ກັບ Server ໄດ້" };
+            }
+        }
+
+        // --- AUTHENTICATION FLOW ---
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            const rememberMe = document.getElementById('rememberMe').checked;
+
+            if (!username || !password) {
+                showModal('ແຈ້ງເຕືອນ', 'ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນ', false);
+                return;
+            }
+
+            toggleLoader(true, 'ກຳລັງກວດສອບຂໍ້ມູນ ແລະ ໂຫຼດໜ້າປະເມີນ...');
+            
+            const res = await apiCall('login', { username, password });
+
+            if (res.success) {
+                const userData = {
+                    username: res.username,
+                    is_first_login: res.is_first_login
+                };
+                saveUserSession(userData, rememberMe);
+
+                if (res.is_first_login) {
+                    toggleLoader(false);
+                    showScreen('changePasswordScreen');
+                } else {
+                    await fetchInitialData();
+                    toggleLoader(false);
+
+                    document.getElementById('currentUserDisplay').textContent = currentUser.username;
+                    showScreen('evaluationScreen');
+                    startSilentPolling();
+                    
+                    focusEvaluationHeader();
+                }
+            } else {
+                toggleLoader(false);
+                showModal('ເຂົ້າສູ່ລະບົບບໍ່ສຳເລັດ', res.message || 'Username ຫຼື Password ບໍ່ຖືກຕ້ອງ', false);
+            }
+        }
+
+        async function handleChangePassword(e) {
+            e.preventDefault();
+            const newPass = document.getElementById('newPassword').value.trim();
+            const confirmPass = document.getElementById('confirmPassword').value.trim();
+
+            if (newPass !== confirmPass) {
+                showModal('ແຈ້ງເຕືອນ', 'ລະຫັດຜ່ານໃໝ່ ແລະ ຢືນຢັນລະຫັດຜ່ານ ບໍ່ກົງກັນ', false);
+                return;
+            }
+
+            toggleLoader(true, 'ກຳລັງອັບເດດລະຫັດຜ່ານ ແລະ ໂຫຼດຂໍ້ມູນ...');
+            const res = await apiCall('changePassword', {
+                username: currentUser.username,
+                newPassword: newPass
+            });
+
+            if (res.success) {
+                currentUser.is_first_login = false;
+                const is90Days = !!localStorage.getItem('eval_user_90days');
+                saveUserSession(currentUser, is90Days);
+                
+                await fetchInitialData();
+                toggleLoader(false);
+
+                showModal('ສຳເລັດ', 'ປ່ຽນລະຫັດຜ່ານສຳເລັດແລ້ວ', true, 5);
+                document.getElementById('currentUserDisplay').textContent = currentUser.username;
+                showScreen('evaluationScreen');
+                startSilentPolling();
+                
+                focusEvaluationHeader();
+            } else {
+                toggleLoader(false);
+                showModal('ຜິດພາດ', res.message || 'ບໍ່ສາມາດປ່ຽນລະຫັດຜ່ານໄດ້', false);
+            }
+        }
+
+        function handleLogout() {
+            stopSilentPolling();
+            sessionStorage.removeItem('eval_user');
+            localStorage.removeItem('eval_user_90days');
+            currentUser = null;
+            selectedEmployee = null;
+            document.getElementById('loginForm').reset();
+            showScreen('loginScreen');
+        }
+
+        // --- FETCH EVALUATION DATA ---
+        async function fetchInitialData(isManualRefresh = false) {
+            if (isManualRefresh) {
+                toggleLoader(true, 'ກຳລັງດຶງຂໍ້ມູນພະນັກງານ ແລະ ແບບປະເມີນ...');
+            }
+
+            const res = await apiCall('getInitialData', { username: currentUser.username });
+
+            if (isManualRefresh) {
+                toggleLoader(false);
+            }
+
+            if (res.success) {
+                employeesData = res.employees || [];
+                listsData = res.lists || [];
+                evaluationHistory = res.evaluations || [];
+
+                renderEmployeeList();
+
+                if (selectedEmployee) {
+                    const updatedEmp = employeesData.find(e => e.emp_id === selectedEmployee.emp_id);
+                    if (updatedEmp) selectEmployee(updatedEmp);
+                } else if (employeesData.length > 0 && !selectedEmployee) {
+                    focusNextPendingEmployee();
+                }
+
+            } else if (isManualRefresh) {
+                showModal('ຜິດພາດ', res.message || 'ບໍ່ສາມາດໂຫຼດຂໍ້ມູນໄດ້', false);
+            }
+        }
+
+        // --- SILENT BACKGROUND SYNC ---
+        async function fetchSilentUpdates() {
+            if (!currentUser || document.getElementById('evaluationScreen').classList.contains('hidden')) return;
+
+            try {
+                const res = await apiCall('getInitialData', { username: currentUser.username });
+                if (res.success) {
+                    const prevListsLength = listsData.length;
+                    
+                    employeesData = res.employees || [];
+                    listsData = res.lists || [];
+                    evaluationHistory = res.evaluations || [];
+
+                    renderEmployeeList();
+
+                    if (selectedEmployee) {
+                        const evalRecord = evaluationHistory.find(h => h.evaluatee_id === selectedEmployee.emp_id);
+                        const isEvaluated = !!evalRecord;
+                        const banner = document.getElementById('alreadyEvaluatedBanner');
+                        const submitWrapper = document.getElementById('submitButtonWrapper');
+
+                        if (isEvaluated) {
+                            banner.classList.remove('hidden');
+                            submitWrapper.classList.add('hidden');
+                        }
+
+                        if (prevListsLength !== listsData.length) {
+                            renderQuestionsForm(evalRecord);
+                            calculateTotalScore();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log("Silent background poll skipped");
+            }
+        }
+
+        function startSilentPolling() {
+            stopSilentPolling();
+            silentPollInterval = setInterval(fetchSilentUpdates, 15000);
+        }
+
+        function stopSilentPolling() {
+            if (silentPollInterval) {
+                clearInterval(silentPollInterval);
+                silentPollInterval = null;
+            }
+        }
+
+        function toggleEmployeeListCollapse() {
+            const wrapper = document.getElementById('employeeListWrapper');
+            const icon = document.getElementById('collapseIcon');
+            
+            if (wrapper.style.display === 'none') {
+                wrapper.style.display = 'block';
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                wrapper.style.display = 'none';
+                icon.style.transform = 'rotate(-90deg)';
+            }
+        }
+
+        // --- RENDER EMPLOYEE CARDS ---
+        function renderEmployeeList() {
+            const listContainer = document.getElementById('employeeList');
+            listContainer.innerHTML = '';
+
+            let evaluatedCount = 0;
+
+            employeesData.forEach(emp => {
+                const evalRecord = evaluationHistory.find(h => h.evaluatee_id === emp.emp_id);
+                const isEvaluated = !!evalRecord;
+                if (isEvaluated) evaluatedCount++;
+
+                const card = document.createElement('div');
+                const isSelected = selectedEmployee && selectedEmployee.emp_id === emp.emp_id;
+
+                card.className = `p-4 rounded-2xl border transition cursor-pointer flex items-center justify-between shadow-sm ${
+                    isSelected 
+                        ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-500/20' 
+                        : 'bg-white border-slate-200 hover:border-slate-300'
+                }`;
+
+                card.onclick = () => selectEmployee(emp);
+
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-11 h-11 rounded-xl ${isEvaluated ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'} flex items-center justify-center font-bold text-sm">
+                            ${emp.emp_id.substring(0, 4)}
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-slate-800 text-sm">${emp.name}</h4>
+                            </div>
+                            <p class="text-xs text-slate-500">${emp.position} • <span class="text-slate-400">${emp.department || ''}</span></p>
+                        </div>
+                    </div>
+                    <div>
+                        ${isEvaluated 
+                            ? `<span class="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1">
+                                 <i class="fa-solid fa-check text-[10px]"></i> ປະເມີນແລ້ວ
+                               </span>`
+                            : `<span class="bg-amber-50 text-amber-600 border border-amber-200 text-xs px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1">
+                                 <i class="fa-regular fa-clock text-[10px]"></i> ຣໍຖ້າ
+                               </span>`
+                        }
+                    </div>
+                `;
+
+                listContainer.appendChild(card);
+            });
+
+            document.getElementById('pendingBadge').textContent = `ປະເມີນແລ້ວ: ${evaluatedCount} / ${employeesData.length}`;
+        }
+
+        function focusEvaluationHeader() {
+            const headerBlock = document.getElementById('evaluationHeaderBlock');
+            if (headerBlock) {
+                headerBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // --- SELECT EMPLOYEE & RENDER FORM ---
+        function selectEmployee(emp) {
+            selectedEmployee = emp;
+            renderEmployeeList();
+
+            document.getElementById('formPlaceholder').classList.add('hidden');
+            const formCard = document.getElementById('evaluationFormCard');
+            formCard.classList.remove('hidden');
+
+            document.getElementById('evalEmpId').textContent = emp.emp_id;
+            document.getElementById('evalEmpName').textContent = emp.name;
+            document.getElementById('evalEmpPos').textContent = `${emp.position} (${emp.department || ''})`;
+
+            const evalRecord = evaluationHistory.find(h => h.evaluatee_id === emp.emp_id);
+            const isEvaluated = !!evalRecord;
+
+            const banner = document.getElementById('alreadyEvaluatedBanner');
+            const submitWrapper = document.getElementById('submitButtonWrapper');
+            const commentInput = document.getElementById('evalComment');
+
+            if (isEvaluated) {
+                banner.classList.remove('hidden');
+                submitWrapper.classList.add('hidden');
+                commentInput.value = evalRecord.comment || '';
+                commentInput.disabled = true;
+            } else {
+                banner.classList.add('hidden');
+                submitWrapper.classList.remove('hidden');
+                commentInput.value = '';
+                commentInput.disabled = false;
+            }
+
+            renderQuestionsForm(evalRecord);
+            calculateTotalScore();
+
+            focusEvaluationHeader();
+        }
+
+        function renderQuestionsForm(evalRecord = null) {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+
+            let existingScores = {};
+            if (evalRecord && evalRecord.score_data) {
+                evalRecord.score_data.split(',').forEach(item => {
+                    const [qId, score] = item.split(':');
+                    if (qId && score) existingScores[qId.trim()] = parseInt(score.trim(), 10);
+                });
+            }
+
+            listsData.forEach((q, index) => {
+                const qCard = document.createElement('div');
+                qCard.className = "bg-slate-50 border border-slate-200 rounded-xl p-4 transition hover:bg-slate-50/80";
+
+                const currentScore = existingScores[q.list_id] !== undefined ? existingScores[q.list_id] : 100;
+
+                let scoreOptionsHtml = SCORE_OPTIONS.map(val => {
+                    const isChecked = currentScore === val;
+                    const isDisabled = !!evalRecord;
+                    return `
+                        <label class="flex-1 text-center">
+                            <input type="radio" 
+                                   name="score_${q.list_id}" 
+                                   value="${val}" 
+                                   ${isChecked ? 'checked' : ''} 
+                                   ${isDisabled ? 'disabled' : ''} 
+                                   onchange="calculateTotalScore()"
+                                   class="peer hidden">
+                            <div class="py-2 px-1 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 cursor-pointer hover:border-blue-300 transition shadow-sm ${isDisabled ? 'cursor-not-allowed opacity-80' : ''}">
+                                ${val}
+                            </div>
+                        </label>
+                    `;
+                }).join('');
+
+                qCard.innerHTML = `
+                    <div class="flex items-start justify-between gap-2 mb-3">
+                        <span class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-md">
+                            ${q.list_id}
+                        </span>
+                        <h4 class="text-sm font-semibold text-slate-800 flex-grow">${q.title}</h4>
+                    </div>
+                    <div class="grid grid-cols-6 sm:grid-cols-11 gap-1.5 mt-2">
+                        ${scoreOptionsHtml}
+                    </div>
+                `;
+
+                container.appendChild(qCard);
+            });
+        }
+
+        function calculateTotalScore() {
+            if (listsData.length === 0) return;
+
+            let total = 0;
+            let count = 0;
+
+            listsData.forEach(q => {
+                const selected = document.querySelector(`input[name="score_${q.list_id}"]:checked`);
+                if (selected) {
+                    total += parseInt(selected.value, 10);
+                    count++;
+                }
+            });
+
+            const avgScore = count > 0 ? Math.round(total / count) : 0;
+            document.getElementById('totalScoreDisplay').textContent = `${avgScore} / 100`;
+        }
+
+        // --- SAVE EVALUATION (TRIGGER CONFIRM POPUP) ---
+        function handleSaveEvaluation(e) {
+            e.preventDefault();
+
+            if (!selectedEmployee) return;
+
+            let scorePairs = [];
+            let allAnswered = true;
+
+            listsData.forEach(q => {
+                const selected = document.querySelector(`input[name="score_${q.list_id}"]:checked`);
+                if (selected) {
+                    scorePairs.push(`${q.list_id}:${selected.value}`);
+                } else {
+                    allAnswered = false;
+                }
+            });
+
+            if (!allAnswered) {
+                showModal('ແຈ້ງເຕືອນ', 'ກະລຸນາໃຫ້ຄະແນນຄົບທຸກຫົວຂໍ້ການປະເມີນ', false);
+                return;
+            }
+
+            const scoreDataStr = scorePairs.join(',');
+            const comment = document.getElementById('evalComment').value.trim();
+
+            // ເກັບຂໍ້ມູນໄວ້ຊົ່ວຄາວ ເພື່ອສົ່ງເມື່ອກົດ "ຕົກລົງບັນທຶກ"
+            pendingSavePayload = {
+                ip: userIpAddress,
+                evaluator_id: currentUser.username,
+                evaluatee_id: selectedEmployee.emp_id,
+                score_data: scoreDataStr,
+                comment: comment
+            };
+
+            // ສະແດງ Pop-up ສອບຖາມກ່ອນ
+            showConfirmModal(`ທ່ານຕ້ອງການບັນທຶກຜົນການປະເມີນຂອງ "${selectedEmployee.name}" ແທ້ ຫຼື ບໍ່?`);
+        }
+
+        // --- SUBMIT EVALUATION DATA TO SERVER ---
+        async function submitEvaluationData() {
+            closeConfirmModal();
+            if (!pendingSavePayload) return;
+
+            toggleLoader(true, 'ກຳລັງບັນທຶກຜົນການປະເມີນ...');
+
+            const res = await apiCall('saveEvaluation', pendingSavePayload);
+
+            toggleLoader(false);
+
+            if (res.success) {
+                showModal('ບັນທຶກສຳເລັດ', 'ບັນທຶກຜົນການປະເມີນຮຽບຮ້ອຍແລ້ວ', true, 5);
+                
+                evaluationHistory.push({
+                    timestamp: new Date().toISOString(),
+                    ip: pendingSavePayload.ip,
+                    evaluator_id: pendingSavePayload.evaluator_id,
+                    evaluatee_id: pendingSavePayload.evaluatee_id,
+                    score_data: pendingSavePayload.score_data,
+                    comment: pendingSavePayload.comment
+                });
+
+                pendingSavePayload = null;
+                focusNextPendingEmployee();
+
+            } else {
+                pendingSavePayload = null;
+                showModal('ຜິດພາດ', res.message || 'ບໍ່ສາມາດບັນທຶກຂໍ້ມູນໄດ້', false);
+            }
+        }
+
+        function focusNextPendingEmployee() {
+            const pendingEmp = employeesData.find(emp => {
+                return !evaluationHistory.some(h => h.evaluatee_id === emp.emp_id);
+            });
+
+            if (pendingEmp) {
+                selectEmployee(pendingEmp);
+            } else {
+                if (employeesData.length > 0) {
+                    selectEmployee(employeesData[0]);
+                }
+                renderEmployeeList();
+            }
+        }
+    </script>
+</body>
+</html>
