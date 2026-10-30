@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Noto Sans Lao -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body {
+            font-family: 'Noto Sans Lao', sans-serif;
+            background-color: #f8fafc;
+        }
+        .line-clamp-1 {
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800 relative">
+
+    <!-- Global Fullscreen Loading Overlay with Circular Animated Logo -->
+    <div id="fullLoadingOverlay" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="relative flex items-center justify-center">
+            <!-- Outer Spinning Circle / Ring -->
+            <div class="w-28 h-28 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+            
+            <!-- Circular Logo in the Center -->
+            <div class="absolute w-20 h-20 rounded-full overflow-hidden shadow-md border-2 border-slate-100 bg-white flex items-center justify-center">
+                <img src="https://ulzjumjaltrztorjwtgw.supabase.co/storage/v1/object/public/Photo/logo1.png" 
+                     alt="Logo" 
+                     class="w-full h-full object-cover"
+                     onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=L-Jats';">
+            </div>
+        </div>
+        <p class="mt-4 text-sm font-bold text-slate-600 animate-pulse">ກຳລັງໂຫຼດຂໍ້ມູນຈາກ Supabase...</p>
+    </div>
+
+    <!-- Header Section -->
+    <header class="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-slate-100 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            
+            <!-- Logo and Title -->
+            <div class="flex items-center space-x-3.5">
+                <div class="relative w-12 h-12 rounded-2xl overflow-hidden shadow-sm border border-slate-100 flex items-center justify-center bg-slate-50 flex-shrink-0">
+                    <img src="https://ulzjumjaltrztorjwtgw.supabase.co/storage/v1/object/public/Photo/logo1.png" 
+                         alt="Logo" 
+                         class="w-full h-full object-cover"
+                         onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=L-Jats';">
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                        L-Jats Menu
+                    </h1>
+                    <p class="text-xs font-medium text-slate-500">ເມນູລວມພະແນກບໍລິຫານ</p>
+                </div>
+            </div>
+
+            <!-- Total Badge Indicator -->
+            <span id="totalItemsBadge" class="bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold px-3.5 py-1.5 rounded-full shadow-sm">
+                ກຳລັງໂຫຼດ...
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                <i class="fas fa-th-large text-indigo-600"></i> ລາຍການເມນູທັງໝົດ
+            </h2>
+        </div>
+
+        <!-- Cards Grid Container -->
+        <div id="menuGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            <!-- Dynamic Menu Cards injected here via JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <div class="w-20 h-20 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                <i class="fas fa-folder-open"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-700">ບໍ່ພົບຂໍ້ມູນເມນູ</h3>
+            <p class="text-slate-400 text-sm mt-1">ກະລຸນາກວດສອບຂໍ້ມູນໃນ Supabase Database</p>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div id="paginationContainer" class="mt-8 flex flex-col sm:flex-row items-center justify-between border-t border-slate-200/80 pt-6 gap-4">
+            <div class="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+                ສະແດງຜົນ <span id="pageStart" class="font-bold text-slate-800">0</span> - <span id="pageEnd" class="font-bold text-slate-800">0</span> ຈາກທັງໝົດ <span id="totalItems" class="font-bold text-slate-800">0</span> ລາຍການ
+            </div>
+
+            <div class="inline-flex items-center space-x-2">
+                <button id="prevBtn" onclick="changePage(-1)" class="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-2 shadow-sm">
+                    <i class="fas fa-chevron-left"></i> ກ່ອນໜ້າ
+                </button>
+                
+                <div id="pageNumbers" class="flex items-center space-x-1.5">
+                    <!-- Dynamic Page Numbers -->
+                </div>
+
+                <button id="nextBtn" onclick="changePage(1)" class="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-2 shadow-sm">
+                    ຖັດໄປ <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-100 py-5 mt-10">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+            Copyright @ L-jats by FM/IT
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = "https://ulzjumjaltrztorjwtgw.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsemp1bWphbHRyenRvcmp3dGd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxNDcyMDcsImV4cCI6MjEwODcyMzIwN30.19fLMf6fZ_R1QozOMi6nI_24Kiew_gqzM4RxK9wKB8M";
+
+        // Initialize Supabase Client
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let menuData = [];
+        let currentPage = 1;
+        const itemsPerPage = 8;
+        let isInitialLoad = true;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchMenuData();
+
+            // Refresh data periodically every 10 seconds
+            setInterval(() => {
+                fetchMenuData(true);
+            }, 10000);
+        });
+
+        async function fetchMenuData(isSilent = false) {
+            try {
+                // Querying Supabase table (Defaulting to table 'menu', or fallback to 'menus')
+                let { data, error } = await supabaseClient
+                    .from('menu')
+                    .select('*');
+
+                if (error) {
+                    // Try alternative table name if 'menu' doesn't exist
+                    const altRes = await supabaseClient.from('menus').select('*');
+                    if (!altRes.error) {
+                        data = altRes.data;
+                        error = null;
+                    }
+                }
+
+                if (error) throw error;
+
+                menuData = data || [];
+
+                if (isInitialLoad) {
+                    const overlay = document.getElementById('fullLoadingOverlay');
+                    overlay.classList.add('opacity-0');
+                    setTimeout(() => {
+                        overlay.classList.add('hidden');
+                    }, 500);
+                    isInitialLoad = false;
+                }
+
+                renderDashboard();
+            } catch (error) {
+                console.error("Error fetching menu data from Supabase:", error);
+                if (isInitialLoad) {
+                    document.getElementById('fullLoadingOverlay').innerHTML = `
+                        <div class="text-center p-6 text-red-500 max-w-md">
+                            <i class="fas fa-exclamation-circle text-4xl mb-3"></i>
+                            <p class="font-bold text-lg">ເກີດຂໍ້ຜິດພາດໃນການໂຫຼດຂໍ້ມູນ!</p>
+                            <p class="text-xs text-slate-400 mt-1 mb-4">${error.message || 'ກະລຸນາກວດສອບ Table name ຫຼື RLS Policy ໃນ Supabase'}</p>
+                            <button onclick="location.reload()" class="px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-xl text-sm shadow-md">
+                                ລອງໃໝ່ອີກຄັ້ງ
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function renderDashboard() {
+            const gridContainer = document.getElementById('menuGrid');
+            const emptyState = document.getElementById('emptyState');
+            const totalBadge = document.getElementById('totalItemsBadge');
+
+            gridContainer.innerHTML = '';
+            totalBadge.textContent = `${menuData.length} ລາຍການ`;
+
+            if (menuData.length === 0) {
+                emptyState.classList.remove('hidden');
+                document.getElementById('paginationContainer').classList.add('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+                document.getElementById('paginationContainer').classList.remove('hidden');
+            }
+
+            const totalPages = Math.ceil(menuData.length / itemsPerPage);
+            if (currentPage > totalPages && totalPages > 0) {
+                currentPage = totalPages;
+            }
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, menuData.length);
+            const paginatedItems = menuData.slice(startIndex, endIndex);
+
+            paginatedItems.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "group bg-white rounded-3xl p-5 border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between cursor-pointer relative overflow-hidden";
+                
+                // Read properties from Supabase column names
+                // Topic for bold text, detail/detial for secondary text
+                const topicText = item.topic || item.Topic || item.department || 'ບໍ່ມີຫົວຂໍ້';
+                const detailText = item.detail || item.detial || item.Detail || item.menu || '';
+                const targetUrl = item.name || item.url || item.link || '#';
+                
+                // Get image filename/path or URL from photo column (or fallback columns)
+                const rawPhoto = item.photo || item.url_photo || item.photo_url || item.image_url || item.urlPhoto || '';
+
+                let photoUrl = '';
+                if (rawPhoto && rawPhoto.trim() !== '') {
+                    const cleanPhoto = rawPhoto.trim();
+                    // If it's already a full HTTP/HTTPS URL, use it directly
+                    if (cleanPhoto.startsWith('http://') || cleanPhoto.startsWith('https://')) {
+                        photoUrl = cleanPhoto;
+                    } else {
+                        // Clean path: if path starts with 'Photo/' or 'menu/', strip appropriately
+                        let relativePath = cleanPhoto;
+                        if (relativePath.startsWith('Photo/')) {
+                            relativePath = relativePath.replace(/^Photo\//, '');
+                        }
+                        if (!relativePath.startsWith('menu/')) {
+                            relativePath = `menu/${relativePath}`;
+                        }
+
+                        // Generate public URL from Supabase Storage bucket 'Photo'
+                        const { data: publicUrlData } = supabaseClient
+                            .storage
+                            .from('Photo')
+                            .getPublicUrl(relativePath);
+                        
+                        photoUrl = publicUrlData ? publicUrlData.publicUrl : '';
+                    }
+                }
+
+                card.onclick = () => {
+                    if (targetUrl && targetUrl !== '#') {
+                        window.open(targetUrl, '_blank');
+                    }
+                };
+
+                const imageUrl = photoUrl && photoUrl.trim() !== '' 
+                    ? photoUrl 
+                    : `https://placehold.co/300x300/f1f5f9/475569?text=${encodeURIComponent(topicText)}`;
+
+                card.innerHTML = `
+                    <div class="flex flex-col items-center text-center">
+                        <div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden mb-4 bg-slate-50 border border-slate-100 group-hover:scale-105 transition-transform duration-300 shadow-inner">
+                            <img src="${imageUrl}" 
+                                 alt="${topicText}" 
+                                 class="w-full h-full object-cover"
+                                 onerror="this.onerror=null; this.src='https://placehold.co/300x300/f1f5f9/475569?text=No+Image';">
+                        </div>
+
+                        <!-- Bold Topic Text -->
+                        <h3 class="text-base sm:text-lg font-black text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                            ${topicText}
+                        </h3>
+
+                        <!-- Detail Text Below -->
+                        <p class="text-xs sm:text-sm font-semibold text-slate-600 mt-1 line-clamp-1">
+                            ${detailText}
+                        </p>
+                    </div>
+
+                    <!-- Action Helper Text Centered -->
+                    <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-center gap-1.5 text-indigo-600 text-xs font-bold text-center">
+                        <span>ກົດເພື່ອເປີດລິ້ງ</span>
+                        <i class="fas fa-arrow-right transform group-hover:translate-x-1 transition-transform"></i>
+                    </div>
+                `;
+
+                gridContainer.appendChild(card);
+            });
+
+            document.getElementById('pageStart').textContent = menuData.length > 0 ? startIndex + 1 : 0;
+            document.getElementById('pageEnd').textContent = endIndex;
+            document.getElementById('totalItems').textContent = menuData.length;
+
+            renderPaginationButtons();
+        }
+
+        function renderPaginationButtons() {
+            const totalPages = Math.ceil(menuData.length / itemsPerPage);
+            const pageNumbersContainer = document.getElementById('pageNumbers');
+            pageNumbersContainer.innerHTML = '';
+
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+
+            for (let i = 1; i <= totalPages; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.textContent = i;
+                pageBtn.className = `w-9 h-9 text-xs sm:text-sm font-bold rounded-xl transition ${
+                    i === currentPage
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                        : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                }`;
+                pageBtn.onclick = () => {
+                    currentPage = i;
+                    renderDashboard();
+                };
+                pageNumbersContainer.appendChild(pageBtn);
+            }
+        }
+
+        function changePage(direction) {
+            const totalPages = Math.ceil(menuData.length / itemsPerPage);
+            const newPage = currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderDashboard();
+            }
+        }
+    </script>
+</body>
+</html>
