@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile Data App - Supabase</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Noto Sans Lao) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans Lao', sans-serif;
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Loading Spinner Animation */
+        @keyframes spin-slow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes spin-reverse {
+            0% { transform: rotate(360deg); }
+            100% { transform: rotate(0deg); }
+        }
+        .animate-spin-slow {
+            animation: spin-slow 2s linear infinite;
+        }
+        .animate-spin-reverse {
+            animation: spin-reverse 2.5s linear infinite;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen text-slate-800 antialiased max-w-md mx-auto bg-white shadow-xl relative pb-12">
+
+    <!-- Global Fullscreen Custom Loading Screen Overlay with White Blur Background -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white/80 backdrop-blur-xl z-50 flex flex-col items-center justify-center transition-all duration-300 opacity-0 pointer-events-none">
+        <div class="relative flex items-center justify-center">
+            <!-- Outer Glowing Ring -->
+            <div class="w-36 h-36 rounded-full border-4 border-t-indigo-600 border-r-purple-600 border-b-pink-600 border-l-transparent animate-spin-slow shadow-xl shadow-indigo-500/20"></div>
+            
+            <!-- Inner Dashed Ring -->
+            <div class="absolute w-32 h-32 rounded-full border-2 border-dashed border-indigo-400/60 animate-spin-reverse"></div>
+            
+            <!-- Center Circular Image Avatar -->
+            <div class="absolute w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-2xl flex items-center justify-center bg-slate-100">
+                <img src="https://ubipbzilvjxlpbpbmlhf.supabase.co/storage/v1/object/public/photo/profile/91255129_1794062607961.jpg" 
+                     alt="Loading Avatar" 
+                     class="w-full h-full object-cover scale-105"
+                     onerror="this.onerror=null; this.src='https://placehold.co/150x150/4f46e5/ffffff?text=Loading';">
+            </div>
+        </div>
+        
+        <div class="mt-6 px-4 py-1.5 rounded-full bg-slate-900/90 border border-slate-200 shadow-xl backdrop-blur-md flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
+            <p class="text-xs font-semibold text-white tracking-wide flex items-center">
+                <span id="loading-text">ກໍາລັງໂຫຼດຂໍ້ມູນ...</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Header / Status Bar -->
+    <header class="bg-indigo-600 text-white p-4 sticky top-0 z-30 shadow-md">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <button id="btn-back" onclick="goBack()" class="hidden mr-1 p-2 rounded-full hover:bg-indigo-700 active:scale-95 transition">
+                    <i class="fa-solid fa-arrow-left text-lg"></i>
+                </button>
+                <h1 id="app-title" class="font-bold text-lg truncate">ລາຍການຫຼັກ (Table H)</h1>
+            </div>
+            
+            <!-- Supabase Connection Indicator -->
+            <div id="connection-status" class="flex items-center space-x-1 text-xs bg-indigo-800 px-2.5 py-1 rounded-full">
+                <span id="status-dot" class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+                <span id="status-text" class="font-medium text-yellow-200">ກໍາລັງເຊື່ອມຕໍ່...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-4 overflow-y-auto hide-scrollbar">
+
+        <!-- ================= PAGE 1: Table H List ================= -->
+        <section id="page-1" class="space-y-4">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">ເລືອກລາຍການງວດ / H</h2>
+                <div class="flex space-x-2">
+                    <button onclick="openAddHModal()" class="text-xs bg-indigo-600 text-white font-medium px-2.5 py-1.5 rounded-lg shadow-sm hover:bg-indigo-700 active:scale-95 transition flex items-center">
+                        <i class="fa-solid fa-plus mr-1"></i> ເພີ່ມງວດ H
+                    </button>
+                    <button onclick="fetchPage1Data()" class="text-xs text-indigo-600 border border-indigo-200 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="h-list-container" class="space-y-3">
+                <!-- Data cards will be rendered here -->
+                <div class="text-center py-8 text-gray-400 animate-pulse">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+                    <p class="text-sm">ກໍາລັງດຶງຂໍ້ມູນ...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PAGE 2: User List for selected H ================= -->
+        <section id="page-2" class="hidden space-y-4">
+            <!-- Info Header -->
+            <div id="selected-h-card" class="bg-indigo-50 border border-indigo-100 p-3.5 rounded-xl shadow-sm">
+                <p class="text-xs text-indigo-500 font-semibold uppercase">ງວດທີ່ເລືອກ</p>
+                <h3 id="p2-h-name" class="font-bold text-indigo-900 text-lg">...</h3>
+                <p id="p2-h-date" class="text-xs text-indigo-700 mt-1"></p>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">ລາຍຊື່ User / ລູກຄ້າ</h2>
+                <div class="flex items-center space-x-2">
+                    <span id="user-count" class="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">0 ລາຍການ</span>
+                    <button onclick="openAddUserModal()" class="text-xs bg-indigo-600 text-white font-medium px-2.5 py-1.5 rounded-lg shadow-sm hover:bg-indigo-700 active:scale-95 transition flex items-center">
+                        <i class="fa-solid fa-user-plus mr-1"></i> ເພີ່ມ User
+                    </button>
+                </div>
+            </div>
+
+            <div id="user-list-container" class="space-y-3">
+                <!-- User cards will be rendered here -->
+            </div>
+        </section>
+
+        <!-- ================= PAGE 3: Add Transaction / Detail ================= -->
+        <section id="page-3" class="hidden space-y-4">
+            <!-- Selected Info Summary -->
+            <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-4 rounded-2xl shadow-lg space-y-2">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-xs text-indigo-200 font-medium">ລູກຄ້າ / User</span>
+                        <h2 id="p3-user-name" class="text-xl font-bold">...</h2>
+                    </div>
+                    <span class="bg-indigo-500/50 text-indigo-100 text-xs px-2.5 py-1 rounded-lg">
+                        HID: <span id="p3-hid-display">--</span>
+                    </span>
+                </div>
+                <div class="border-t border-indigo-500/40 pt-2 flex justify-between text-xs text-indigo-100">
+                    <div>ງວດ: <span id="p3-h-name" class="font-semibold text-white">...</span></div>
+                    <div>User ID: <span id="p3-userid-display" class="font-semibold text-white">--</span></div>
+                </div>
+            </div>
+
+            <!-- Validation Status Box -->
+            <div id="rule-status-box" class="p-3 rounded-xl text-xs flex items-start space-x-2 border transition-all">
+                <i id="rule-icon" class="fa-solid fa-circle-info text-base mt-0.5"></i>
+                <div id="rule-text" class="flex-1">ກໍາລັງກວດສອບເງື່ອນໄຂ...</div>
+            </div>
+
+            <!-- Advance / Comment Penalty Payment Notice Badge -->
+            <div id="advance-pay-badge" class="hidden bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-xl text-xs flex items-center justify-between shadow-sm">
+                <span id="advance-pay-text" class="font-semibold flex items-center">
+                    <i class="fa-solid fa-bolt text-amber-500 mr-1.5 text-sm"></i> 
+                    ຈ່າຍກ່ອນກຳນົດ (+ເພີ່ມຍອດເປັນ 700,000 ₭)
+                </span>
+                <span id="advance-pay-tag" class="bg-amber-200 text-amber-900 text-[10px] px-2 py-0.5 rounded-full font-bold">700,000₭</span>
+            </div>
+
+            <!-- 40 Days Interactive Grid Container (Compact Version) -->
+            <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm space-y-1.5">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-semibold text-gray-800 text-xs flex items-center">
+                        <i class="fa-solid fa-grid-2 mr-1 text-indigo-600"></i>ຕາຕະລາງ 40 ວັນ (DD/MM)
+                    </h3>
+                    <span id="grid-date-range" class="text-[10px] text-gray-400">ກົດເລືອກວັນທີເພື່ອບັນທຶກ</span>
+                </div>
+                <div id="grid-40-days" class="grid grid-cols-5 gap-1 pt-1">
+                    <!-- 40 day boxes will be rendered here dynamically -->
+                </div>
+            </div>
+
+            <!-- Form section -->
+            <form id="tx-form" onsubmit="handleSaveTransaction(event)" class="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                <h3 class="font-semibold text-gray-800 text-xs border-b pb-1.5">ບັນທຶກຂໍ້ມູນການເກັບເງິນ</h3>
+                
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">ວັນທີເກັບເງິນ (DD/MM)</label>
+                    <select id="select-date-dropdown" required onchange="handleDateSelectFromDropdown()"
+                        class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg p-2 focus:ring-indigo-500 focus:border-indigo-500 block font-medium">
+                        <option value="">-- ກໍາລັງໂຫຼດວັນທີ --</option>
+                    </select>
+                    <p id="date-hint" class="text-[10px] text-gray-500 mt-0.5">ເລືອກວັນທີຈາກຕາຕະລາງ 40 ວັນ</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">ຈໍາ​ນວນ​ເງິນ (Amount)</label>
+                    <input type="number" step="0.01" id="input-amount" placeholder="0.00" required
+                        class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2 focus:ring-indigo-500 focus:border-indigo-500 block font-bold text-indigo-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1 flex justify-between">
+                        <span>ໝາຍເຫດ (Comment)</span>
+                        <span id="comment-lock-status" class="text-[10px] text-amber-600 hidden font-bold"><i class="fa-solid fa-lock mr-0.5"></i>ລັອກເນື່ອງຈາກເປຍແລ້ວ</span>
+                    </label>
+                    <textarea id="input-comment" rows="2" placeholder="ເພີ່ມໝາຍເຫດ (ຖ້າມີ)..."
+                        class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg p-2 focus:ring-indigo-500 focus:border-indigo-500 block disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"></textarea>
+                </div>
+
+                <button type="submit" id="btn-save"
+                    class="w-full bg-indigo-600 text-white font-medium rounded-lg text-sm px-4 py-2.5 hover:bg-indigo-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-floppy-disk mr-1.5"></i> ບັນທຶກຂໍ້ມູນ
+                </button>
+            </form>
+
+            <!-- History List -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-semibold text-gray-600">ປະວັດການບັນທຶກເງິນ (<span id="history-count">0</span>/40 ວັນ)</h3>
+                <div id="tx-history-container" class="space-y-1.5">
+                    <!-- History cards -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Message Toast Alert Modal -->
+    <div id="toast-modal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-5 text-center shadow-2xl transform scale-95 transition-transform duration-200" id="toast-content">
+            <div id="toast-icon-box" class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 bg-indigo-100 text-indigo-600">
+                <i id="toast-icon" class="fa-solid fa-info text-xl"></i>
+            </div>
+            <h4 id="toast-title" class="font-bold text-gray-800 text-base mb-1">ແຈ້ງເຕືອນ</h4>
+            <p id="toast-message" class="text-xs text-gray-600 mb-4">ຂໍ້ຄວາມ...</p>
+            <button onclick="closeToast()" class="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-medium text-sm hover:bg-indigo-700 active:scale-95 transition">
+                ຕົກລົງ
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: ADD TABLE H ================= -->
+    <div id="modal-add-h" class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-gray-800 text-base"><i class="fa-solid fa-folder-plus text-indigo-600 mr-2"></i>ເພີ່ມງວດ H ໃໝ່</h3>
+                <button onclick="closeAddHModal()" class="text-gray-400 hover:text-gray-600 text-lg p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form onsubmit="handleInsertH(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">ຊື່ງວດ (Name) *</label>
+                    <input type="text" id="add-h-name" required placeholder="ຕົວຢ່າງ: ຫວຍອອມສິນ 40 ວັນ ງວດ 3" 
+                        class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">ວັນເລີ່ມ (Start Date) *</label>
+                        <input type="date" id="add-h-startdate" required
+                            class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">ວັນສິ້ນສຸດ (End Date)</label>
+                        <input type="date" id="add-h-enddate"
+                            class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">ວັນຍົກເວັ້ນ (Except Dates)</label>
+                    <div class="flex space-x-2 mb-2">
+                        <input type="date" id="picker-except-date"
+                            class="flex-1 bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <button type="button" onclick="addExceptDateToList()"
+                            class="bg-indigo-50 text-indigo-600 border border-indigo-200 px-3 py-2 rounded-lg text-xs font-medium hover:bg-indigo-100 transition flex items-center">
+                            <i class="fa-solid fa-plus mr-1"></i> ເພີ່ມວັນ
+                        </button>
+                    </div>
+                    <!-- Container for except date badges -->
+                    <div id="except-dates-container" class="flex flex-wrap gap-1.5 min-h-[32px] p-2 bg-gray-50 rounded-lg border border-gray-200 text-xs">
+                        <span class="text-gray-400 italic text-[11px] self-center">ຍັງບໍ່ມີວັນຍົກເວັ້ນ (ກົດເລືອກວັນທີແລ້ວກົດເພີ່ມວັນ)</span>
+                    </div>
+                    <!-- Hidden input to store comma-separated dates -->
+                    <input type="hidden" id="add-h-exceptdate">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">ໝາຍເຫດ (Note)</label>
+                    <textarea id="add-h-note" rows="2" placeholder="ເພີ່ມໝາຍເຫດ..."
+                        class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+                <div class="flex space-x-2 pt-2">
+                    <button type="button" onclick="closeAddHModal()" class="w-1/2 py-2.5 border border-gray-300 text-gray-600 rounded-xl font-medium text-sm hover:bg-gray-50">ຍົກເລີກ</button>
+                    <button type="submit" id="btn-save-h" class="w-1/2 py-2.5 bg-indigo-600 text-white rounded-xl font-medium text-sm hover:bg-indigo-700 active:scale-95 transition">ບັນທຶກ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: ADD USER PROFILE ================= -->
+    <div id="modal-add-user" class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-gray-800 text-base"><i class="fa-solid fa-user-plus text-indigo-600 mr-2"></i>ເພີ່ມ User ໃໝ່</h3>
+                <button onclick="closeAddUserModal()" class="text-gray-400 hover:text-gray-600 text-lg p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form onsubmit="handleInsertUser(event)" class="space-y-3">
+                <div class="bg-indigo-50 p-2.5 rounded-lg text-xs text-indigo-700">
+                    ຜູກກັບ <strong>HID: <span id="modal-user-hid-display">--</span></strong> (<span id="modal-user-hname-display">--</span>)
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">ຊື່ ແລະ ນາມສະກຸນ (Name) *</label>
+                    <input type="text" id="add-user-name" required placeholder="ຕົວຢ່າງ: ສົມຈິດ ສີປະເສີດ" 
+                        class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">ເບີໂທລະສັບ (Phone)</label>
+                    <input type="text" id="add-user-phone" placeholder="020-55512345" 
+                        class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div class="flex space-x-2 pt-2">
+                    <button type="button" onclick="closeAddUserModal()" class="w-1/2 py-2.5 border border-gray-300 text-gray-600 rounded-xl font-medium text-sm hover:bg-gray-50">ຍົກເລີກ</button>
+                    <button type="submit" id="btn-save-user" class="w-1/2 py-2.5 bg-indigo-600 text-white rounded-xl font-medium text-sm hover:bg-indigo-700 active:scale-95 transition">ບັນທຶກ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Supabase Credentials
+        const SUPABASE_URL = "https://llktnflsdectqrvdpzmy.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_N9mc34SkMFPK-oxNscNA1g_O9NNRjT5";
+        
+        let supabaseClient = null;
+
+        // Navigation & State Management
+        let currentPage = 1;
+        let selectedH = null;       // Selected H object
+        let selectedUser = null;    // Selected User object
+        let validDates = [];        // Valid calculated 40 days objects [{ fullDate: 'YYYY-MM-DD', mmdd: 'MM/DD', dayNum: 1 }]
+        let existingTxDates = [];   // Recorded dates (YYYY-MM-DD)
+        let existingTxMap = {};     // Map of date -> tx detail
+        let firstCommentRecord = null; // Stores first comment timestamp & details
+        let tempExceptDates = [];   // Array to store selected except dates for modal H
+
+        window.onload = function() {
+            initSupabase();
+            fetchPage1Data();
+        };
+
+        // Initialize Supabase Connection
+        function initSupabase() {
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            try {
+                if (window.supabase) {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    statusDot.className = "w-2 h-2 rounded-full bg-emerald-400";
+                    statusText.className = "font-medium text-emerald-200";
+                    statusText.innerText = "ເຊື່ອມຕໍ່ແລ້ວ";
+                } else {
+                    throw new Error("Supabase library not loaded");
+                }
+            } catch (err) {
+                console.error("Supabase Init Error:", err);
+                statusDot.className = "w-2 h-2 rounded-full bg-red-500";
+                statusText.className = "font-medium text-red-200";
+                statusText.innerText = "ເຊື່ອມຕໍ່ຫຼົ້ມເຫຼວ";
+            }
+        }
+
+        // Custom Loading Overlay Functions
+        function showLoading(text = 'ກໍາລັງໂຫຼດຂໍ້ມູນ...') {
+            const overlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+            if (loadingText) loadingText.innerText = text;
+            if (overlay) {
+                overlay.classList.remove('pointer-events-none');
+                overlay.classList.remove('opacity-0');
+            }
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.classList.add('opacity-0');
+                setTimeout(() => {
+                    overlay.classList.add('pointer-events-none');
+                }, 300);
+            }
+        }
+
+        // Custom Modal Toast System
+        function showToast(title, message, iconClass = 'fa-solid fa-info', isSuccess = true) {
+            const modal = document.getElementById('toast-modal');
+            const content = document.getElementById('toast-content');
+            const iconBox = document.getElementById('toast-icon-box');
+            
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-message').innerText = message;
+            document.getElementById('toast-icon').className = iconClass + ' text-xl';
+
+            if (isSuccess) {
+                iconBox.className = "w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 bg-emerald-100 text-emerald-600";
+            } else {
+                iconBox.className = "w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 bg-red-100 text-red-600";
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeToast() {
+            const modal = document.getElementById('toast-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        // ================= MODAL & INSERT HANDLERS =================
+
+        // Modal Table H
+        function openAddHModal() {
+            const modal = document.getElementById('modal-add-h');
+            document.getElementById('add-h-startdate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('picker-except-date').value = new Date().toISOString().split('T')[0];
+            tempExceptDates = [];
+            renderExceptDatesUI();
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeAddHModal() {
+            const modal = document.getElementById('modal-add-h');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        // Except Dates Array Management
+        function addExceptDateToList() {
+            const picker = document.getElementById('picker-except-date');
+            const val = picker.value;
+            if (!val) {
+                showToast("แจ้งເຕືອນ", "ກະລຸນາເລືອກວັນກ່ອນ", "fa-solid fa-triangle-exclamation", false);
+                return;
+            }
+            if (tempExceptDates.includes(val)) {
+                showToast("ແຈ້ງເຕືອນ", "ວັນນີ້ຖືກເພີ່ມໄປແລ້ວ", "fa-solid fa-triangle-exclamation", false);
+                return;
+            }
+            tempExceptDates.push(val);
+            tempExceptDates.sort(); // เรียงลำดับวันที่
+            renderExceptDatesUI();
+        }
+
+        function removeExceptDate(dateStr) {
+            tempExceptDates = tempExceptDates.filter(d => d !== dateStr);
+            renderExceptDatesUI();
+        }
+
+        function renderExceptDatesUI() {
+            const container = document.getElementById('except-dates-container');
+            const hiddenInput = document.getElementById('add-h-exceptdate');
+
+            hiddenInput.value = tempExceptDates.join(',');
+
+            if (tempExceptDates.length === 0) {
+                container.innerHTML = `<span class="text-gray-400 italic text-[11px] self-center">ຍັງບໍ່ມີວັນຍົກເວັ້ນ (ກົດເລືອກວັນທີແລ້ວກົດເພີ່ມວັນ)</span>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            tempExceptDates.forEach(d => {
+                const badge = document.createElement('div');
+                badge.className = "bg-indigo-50 border border-indigo-200 text-indigo-700 px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1.5 shadow-sm";
+                badge.innerHTML = `
+                    <span><i class="fa-regular fa-calendar-xmark mr-1 text-indigo-500"></i>${d}</span>
+                    <button type="button" onclick="removeExceptDate('${d}')" class="text-indigo-400 hover:text-red-500 font-bold px-1">✕</button>
+                `;
+                container.appendChild(badge);
+            });
+        }
+
+        async function handleInsertH(e) {
+            e.preventDefault();
+            showLoading('ກໍາລັງບັນທຶກຂໍ້ມູນ Table H...');
+            const btn = document.getElementById('btn-save-h');
+            btn.disabled = true;
+
+            const name = document.getElementById('add-h-name').value;
+            const startdate = document.getElementById('add-h-startdate').value;
+            const enddate = document.getElementById('add-h-enddate').value;
+            const exceptdate = document.getElementById('add-h-exceptdate').value;
+            const note = document.getElementById('add-h-note').value;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('h')
+                    .insert([{ name, startdate, enddate, exceptdate, note }]);
+
+                if (error) throw error;
+
+                closeAddHModal();
+                showToast("ສຳເລັດ", "ເພີ່ມຂໍ້ມູນ Table H ເຂົ້າ Database ສຳເລັດ!", "fa-solid fa-circle-check", true);
+                
+                document.getElementById('add-h-name').value = '';
+                document.getElementById('add-h-exceptdate').value = '';
+                document.getElementById('add-h-note').value = '';
+
+                fetchPage1Data();
+            } catch (err) {
+                console.error(err);
+                showToast("ເພີ່ມຂໍ້ມູນບໍ່ສຳເລັດ", err.message, "fa-solid fa-triangle-exclamation", false);
+            } finally {
+                hideLoading();
+                btn.disabled = false;
+            }
+        }
+
+        // Modal User Profile
+        function openAddUserModal() {
+            if (!selectedH) return;
+            document.getElementById('modal-user-hid-display').innerText = selectedH.hid;
+            document.getElementById('modal-user-hname-display').innerText = selectedH.name;
+            
+            const modal = document.getElementById('modal-add-user');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeAddUserModal() {
+            const modal = document.getElementById('modal-add-user');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        async function handleInsertUser(e) {
+            e.preventDefault();
+            showLoading('ກໍາລັງບັນທຶກ User ໃໝ່...');
+            const btn = document.getElementById('btn-save-user');
+            btn.disabled = true;
+
+            const name = document.getElementById('add-user-name').value;
+            const phone = document.getElementById('add-user-phone').value;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('user_profile')
+                    .insert([{ hid: selectedH.hid, name, phone }]);
+
+                if (error) throw error;
+
+                closeAddUserModal();
+                showToast("ສຳເລັດ", "ເພີ່ມຂໍ້ມູນ User ເຂົ້າ Database ສຳເລັດ!", "fa-solid fa-circle-check", true);
+
+                document.getElementById('add-user-name').value = '';
+                document.getElementById('add-user-phone').value = '';
+
+                fetchPage2Data(selectedH.hid);
+            } catch (err) {
+                console.error(err);
+                showToast("ເພີ່ມຂໍ້ມູນບໍ່ສຳເລັດ", err.message, "fa-solid fa-triangle-exclamation", false);
+            } finally {
+                hideLoading();
+                btn.disabled = false;
+            }
+        }
+
+        // Navigation Function
+        function navigateTo(pageNumber) {
+            currentPage = pageNumber;
+            document.getElementById('page-1').classList.add('hidden');
+            document.getElementById('page-2').classList.add('hidden');
+            document.getElementById('page-3').classList.add('hidden');
+
+            const btnBack = document.getElementById('btn-back');
+            const title = document.getElementById('app-title');
+
+            if (pageNumber === 1) {
+                document.getElementById('page-1').classList.remove('hidden');
+                btnBack.classList.add('hidden');
+                title.innerText = "ລາຍການຫຼັກ (Table H)";
+            } else if (pageNumber === 2) {
+                document.getElementById('page-2').classList.remove('hidden');
+                btnBack.classList.remove('hidden');
+                title.innerText = "ລາຍຊື່ User (ໜ້າ 2)";
+            } else if (pageNumber === 3) {
+                document.getElementById('page-3').classList.remove('hidden');
+                btnBack.classList.remove('hidden');
+                title.innerText = "ບັນທຶກລາຍອຽດ (ໜ້າ 3)";
+            }
+        }
+
+        function goBack() {
+            if (currentPage === 3) navigateTo(2);
+            else if (currentPage === 2) navigateTo(1);
+        }
+
+        // ================= PAGE 1 LOGIC =================
+        async function fetchPage1Data() {
+            showLoading('ກໍາລັງດຶງຂໍ້ມູນ Table H...');
+            const container = document.getElementById('h-list-container');
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-400 animate-pulse">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+                    <p class="text-sm">ກໍາລັງດຶງຂໍ້ມູນ Table H...</p>
+                </div>`;
+
+            if (!supabaseClient) {
+                hideLoading();
+                showToast("ຂໍ້ອຸປະສັກ", "ບໍ່ສາມາດເຊື່ອມຕໍ່ Supabase ໄດ້", "fa-solid fa-triangle-exclamation", false);
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('h')
+                    .select('*')
+                    .order('hid', { ascending: true });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                            <i class="fa-solid fa-folder-open text-gray-300 text-3xl mb-2"></i>
+                            <p class="text-xs text-gray-500">ບໍ່ພົບຂໍ້ມູນ Table H ຢູ່ Supabase</p>
+                            <p class="text-[11px] text-indigo-600 mt-1">ກະລຸນາ Insert SQL Data ເຂົ້າ Database ຂອງທ່ານ</p>
+                        </div>`;
+                    return;
+                }
+
+                container.innerHTML = '';
+                data.forEach(item => {
+                    // Calculate total active days based on startdate, enddate, and exceptdate
+                    let totalDaysCalc = 0;
+                    if (item.startdate) {
+                        const exceptList = item.exceptdate ? item.exceptdate.split(',').map(s => s.trim()) : [];
+                        let curr = new Date(item.startdate);
+                        let endLimit = item.enddate ? new Date(item.enddate) : null;
+                        
+                        let count = 0;
+                        while (count < 100) { // Safety loop limit
+                            if (endLimit && curr > endLimit) break;
+                            const y = curr.getFullYear();
+                            const m = String(curr.getMonth() + 1).padStart(2, '0');
+                            const d = String(curr.getDate()).padStart(2, '0');
+                            const fDate = `${y}-${m}-${d}`;
+                            
+                            if (!exceptList.includes(fDate)) {
+                                totalDaysCalc++;
+                            }
+                            curr.setDate(curr.getDate() + 1);
+                            if (!endLimit && count >= 39) break; // Default max 40 if no enddate
+                            count++;
+                        }
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = "bg-white border border-gray-100 p-4 rounded-xl shadow-sm hover:shadow-md transition active:scale-[0.99] cursor-pointer relative overflow-hidden";
+                    card.onclick = () => selectHItem(item);
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-md">
+                                HID: ${item.hid}
+                            </span>
+                            <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full">
+                                <i class="fa-solid fa-calendar-days mr-1"></i>${totalDaysCalc} ມື້
+                            </span>
+                        </div>
+                        <h3 class="font-bold text-gray-800 text-base mb-1">${escapeHtml(item.name || 'ບໍ່ມີຊື່')}</h3>
+                        <div class="text-xs text-gray-500 space-y-1">
+                            <div><i class="fa-regular fa-calendar mr-1"></i> ວັນເລີ່ມ: ${item.startdate || '-'} ${item.enddate ? `| ວັນສິ້ນສຸດ: ${item.enddate}` : ''}</div>
+                            ${item.exceptdate ? `<div class="text-amber-600"><i class="fa-solid fa-ban mr-1"></i> ວັນຍົກເວັ້ນ: ${item.exceptdate}</div>` : ''}
+                            ${item.note ? `<div class="text-gray-400 italic truncate"><i class="fa-regular fa-note-sticky mr-1"></i> ${escapeHtml(item.note)}</div>` : ''}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-xl text-xs">Error: ${err.message}</div>`;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function selectHItem(hObj) {
+            selectedH = hObj;
+            document.getElementById('p2-h-name').innerText = selectedH.name;
+            document.getElementById('p2-h-date').innerText = `ວັນເລີ່ມ: ${selectedH.startdate || '-'} ${selectedH.enddate ? `| ວັນສິ້ນສຸດ: ${selectedH.enddate}` : ''} | ຍົກເວັ້ນ: ${selectedH.exceptdate || 'ບໍ່ມີ'}`;
+            
+            fetchPage2Data(hObj.hid);
+            navigateTo(2);
+        }
+
+        // ================= PAGE 2 LOGIC =================
+        async function fetchPage2Data(hid) {
+            showLoading('ກໍາລັງດຶງລາຍຊື່ User...');
+            const container = document.getElementById('user-list-container');
+            const countSpan = document.getElementById('user-count');
+            
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-400 animate-pulse">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+                    <p class="text-sm">ກໍາລັງດຶງຂໍ້ມູນ User...</p>
+                </div>`;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('user_profile')
+                    .select('*')
+                    .eq('hid', hid)
+                    .order('userid', { ascending: true });
+
+                if (error) throw error;
+
+                countSpan.innerText = `${data ? data.length : 0} ລາຍການ`;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                            <i class="fa-solid fa-user-slash text-gray-300 text-3xl mb-2"></i>
+                            <p class="text-xs text-gray-500">ບໍ່ພົບ User ທີ່ຜູກກັບ HID ${hid}</p>
+                        </div>`;
+                    return;
+                }
+
+                container.innerHTML = '';
+                data.forEach(user => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white border border-gray-100 p-4 rounded-xl shadow-sm hover:shadow-md transition active:scale-[0.99] cursor-pointer flex items-center justify-between";
+                    card.onclick = () => selectUserItem(user);
+
+                    card.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 text-sm">${escapeHtml(user.name)}</h4>
+                                <p class="text-xs text-gray-400">User ID: ${user.userid} | HID Ref: ${user.hid}</p>
+                                ${user.phone ? `<p class="text-[11px] text-gray-500"><i class="fa-solid fa-phone text-[9px] mr-1"></i>${user.phone}</p>` : ''}
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+                    `;
+                    container.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-xl text-xs">Error: ${err.message}</div>`;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function selectUserItem(userObj) {
+            selectedUser = userObj;
+
+            document.getElementById('p3-user-name').innerText = selectedUser.name;
+            document.getElementById('p3-userid-display').innerText = selectedUser.userid;
+            document.getElementById('p3-h-name').innerText = selectedH.name;
+            document.getElementById('p3-hid-display').innerText = selectedH.hid;
+
+            calculateValid40Days();
+            fetchTransactionHistory();
+
+            navigateTo(3);
+        }
+
+        // ================= PAGE 3 LOGIC & RULES =================
+        
+        // 40 Days Calculation Rule strictly using startdate and enddate from Table H
+        function calculateValid40Days() {
+            validDates = [];
+            if (!selectedH || !selectedH.startdate) return;
+
+            const exceptList = selectedH.exceptdate 
+                ? selectedH.exceptdate.split(',').map(s => s.trim()) 
+                : [];
+
+            let currDate = new Date(selectedH.startdate);
+            let endDateLimit = selectedH.enddate ? new Date(selectedH.enddate) : null;
+            let dayCount = 1;
+            
+            // Loop up to 40 valid active days or until enddate / total span is reached
+            let loopGuard = 0;
+            while (validDates.length < 40 && loopGuard < 200) {
+                if (endDateLimit && currDate > endDateLimit) {
+                    break; 
+                }
+
+                const year = currDate.getFullYear();
+                const month = String(currDate.getMonth() + 1).padStart(2, '0');
+                const day = String(currDate.getDate()).padStart(2, '0');
+                
+                const fullDate = `${year}-${month}-${day}`;
+                const ddmm = `${day}/${month}`;
+                
+                const isExcept = exceptList.includes(fullDate);
+
+                if (!isExcept) {
+                    validDates.push({
+                        fullDate: fullDate,
+                        ddmm: ddmm,
+                        dayNum: dayCount++,
+                        isExcept: false,
+                        index: validDates.length
+                    });
+                } else {
+                    // Include except date in the list so it shows up in grid, marked as except
+                    validDates.push({
+                        fullDate: fullDate,
+                        ddmm: ddmm,
+                        dayNum: '-',
+                        isExcept: true,
+                        index: validDates.length
+                    });
+                }
+                
+                currDate.setDate(currDate.getDate() + 1);
+                loopGuard++;
+            }
+
+            // Display date range label
+            const gridRangeSpan = document.getElementById('grid-date-range');
+            if (validDates.length > 0) {
+                const firstDDMM = validDates[0].ddmm;
+                const lastDDMM = validDates[validDates.length - 1].ddmm;
+                gridRangeSpan.innerText = `(${firstDDMM} - ${lastDDMM})`;
+            } else {
+                gridRangeSpan.innerText = `ກົດເລືອກວັນທີ`;
+            }
+
+            render40DaysGrid();
+            populateDateDropdown();
+        }
+
+        // Render 40 Interactive Grid Boxes (Compact with Except Dates Grayed out)
+        function render40DaysGrid() {
+            const gridContainer = document.getElementById('grid-40-days');
+            gridContainer.innerHTML = '';
+
+            validDates.forEach(item => {
+                const isExcept = item.isExcept;
+                const paidTx = !isExcept ? existingTxMap[item.fullDate] : null;
+                const isPaid = !!paidTx;
+
+                const box = document.createElement('div');
+                
+                if (isExcept) {
+                    // Gray out except dates and disable selection
+                    box.className = `p-1 rounded border text-center transition flex flex-col justify-between select-none bg-gray-200 border-gray-300 text-gray-400 opacity-60 cursor-not-allowed`;
+                } else {
+                    box.className = `p-1 rounded border text-center transition flex flex-col justify-between select-none cursor-pointer ${
+                        isPaid 
+                            ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-sm' 
+                            : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-indigo-50 hover:border-indigo-300'
+                    }`;
+                }
+
+                if (!isExcept) {
+                    box.onclick = () => {
+                        if (!isPaid && existingTxDates.length < 40) {
+                            const dropdown = document.getElementById('select-date-dropdown');
+                            dropdown.value = item.fullDate;
+                            onDatePicked();
+                        }
+                    };
+                }
+
+                box.innerHTML = `
+                    <div class="flex justify-between items-center text-[8px] ${isExcept ? 'text-gray-400' : (isPaid ? 'text-emerald-600 font-bold' : 'text-gray-400')}">
+                        <span>${isExcept ? '<i class="fa-solid fa-ban text-[8px]"></i>' : '#' + item.dayNum}</span>
+                        ${isPaid ? '<i class="fa-solid fa-check text-[8px]"></i>' : ''}
+                    </div>
+                    <div class="text-[10px] font-bold py-0.2 ${isExcept ? 'text-gray-400 line-through' : (isPaid ? 'text-emerald-700' : 'text-gray-800')}">
+                        ${item.ddmm}
+                    </div>
+                    <div class="text-[7.5px] truncate ${isExcept ? 'text-gray-400' : (isPaid ? 'text-emerald-600 font-medium' : 'text-gray-400')}">
+                        ${isExcept ? 'ຍົກເວັ້ນ' : (isPaid ? (parseFloat(paidTx.amount).toLocaleString()) : 'ຍັງບໍ່ຈ່າຍ')}
+                    </div>
+                `;
+
+                gridContainer.appendChild(box);
+            });
+        }
+
+        // Populate Dropdown Options (excluding except dates)
+        function populateDateDropdown() {
+            const dropdown = document.getElementById('select-date-dropdown');
+            dropdown.innerHTML = '';
+
+            const activeValidDates = validDates.filter(item => !item.isExcept);
+
+            if (activeValidDates.length === 0) {
+                dropdown.innerHTML = `<option value="">ບໍ່ມີວັນທີໃນຊ່ວງນີ້</option>`;
+                return;
+            }
+
+            // Find first unrecorded date
+            let firstUnpaidDate = null;
+
+            activeValidDates.forEach(item => {
+                const isPaid = !!existingTxMap[item.fullDate];
+                const option = document.createElement('option');
+                option.value = item.fullDate;
+                
+                if (isPaid) {
+                    option.text = `✓ ${item.ddmm} (ວັນທີ ${item.dayNum}) - ຈ່າຍແລ້ວ`;
+                    option.className = "text-emerald-600 bg-gray-100";
+                    option.disabled = true;
+                } else {
+                    option.text = `${item.ddmm} (ວັນທີ ${item.dayNum})`;
+                    if (!firstUnpaidDate) firstUnpaidDate = item.fullDate;
+                }
+                dropdown.appendChild(option);
+            });
+
+            // Auto-select first unpaid date
+            if (firstUnpaidDate) {
+                dropdown.value = firstUnpaidDate;
+            } else if (activeValidDates.length > 0) {
+                dropdown.value = activeValidDates[0].fullDate;
+            }
+
+            onDatePicked();
+        }
+
+        async function fetchTransactionHistory() {
+            showLoading('ກໍາລັງດຶງປະວັດການເກັບເງິນ...');
+            const container = document.getElementById('tx-history-container');
+            const historyCountSpan = document.getElementById('history-count');
+            container.innerHTML = `<p class="text-xs text-gray-400 text-center py-2 animate-pulse">ກໍາລັງດຶງປະວັດ...</p>`;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('transaction_detail')
+                    .select('*')
+                    .eq('hid', selectedH.hid)
+                    .eq('userid', selectedUser.userid)
+                    .order('created_at', { ascending: true });
+
+                if (error) throw error;
+
+                existingTxDates = data ? data.map(t => t.date) : [];
+                existingTxMap = {};
+                firstCommentRecord = null;
+
+                if (data) {
+                    data.forEach(t => { 
+                        existingTxMap[t.date] = t; 
+                        if (!firstCommentRecord && t.comment && t.comment.trim() !== '') {
+                            firstCommentRecord = t;
+                        }
+                    });
+                }
+
+                historyCountSpan.innerText = existingTxDates.length;
+
+                render40DaysGrid();
+                populateDateDropdown();
+
+                updateRuleStatusUI();
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = `<p class="text-xs text-gray-400 italic text-center py-3 bg-gray-50 rounded-lg">ຍັງບໍ່ມີປະວັດການເກັບເງິນ</p>`;
+                    return;
+                }
+
+                container.innerHTML = '';
+                data.forEach((tx, idx) => {
+                    const item = document.createElement('div');
+                    item.className = "bg-white border border-gray-100 p-2.5 rounded-xl flex justify-between items-center text-xs shadow-sm";
+                    
+                    const parts = tx.date.split('-');
+                    const displayDDMM = parts.length === 3 ? `${parts[2]}/${parts[1]}` : tx.date;
+
+                    item.innerHTML = `
+                        <div>
+                            <div class="font-bold text-gray-800">
+                                <span class="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] mr-1">ວັນທີ ${idx + 1}</span> 
+                                ${displayDDMM} <span class="text-gray-400 font-normal text-[11px]">(${tx.date})</span>
+                            </div>
+                            <div class="text-gray-400 text-[11px] mt-0.5">${escapeHtml(tx.comment || 'ບໍ່ມີໝາຍເຫດ')}</div>
+                        </div>
+                        <div class="font-bold text-emerald-600 text-sm">
+                            +${parseFloat(tx.amount).toLocaleString()}
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<p class="text-xs text-red-500">Error: ${err.message}</p>`;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Helper triggered when date selection action completes
+        function onDatePicked() {
+            validateDateRules();
+
+            const dropdown = document.getElementById('select-date-dropdown');
+            const selectedDateStr = dropdown.value;
+            const amountInput = document.getElementById('input-amount');
+            const commentInput = document.getElementById('input-comment');
+            const commentLockStatus = document.getElementById('comment-lock-status');
+            const advanceBadge = document.getElementById('advance-pay-badge');
+            const advanceText = document.getElementById('advance-pay-text');
+
+            // Find index of chosen date in validDates array
+            const chosenItemIndex = validDates.findIndex(item => item.fullDate === selectedDateStr);
+
+            // Find index of first unpaid date in order
+            const firstUnpaidIndex = validDates.findIndex(item => !existingTxMap[item.fullDate]);
+
+            // Check if selected date is an Advance Date (Skipped unpaid dates in between)
+            const isAdvance = chosenItemIndex > firstUnpaidIndex && firstUnpaidIndex !== -1;
+
+            // Check if there is already a recorded comment for this user in history
+            if (firstCommentRecord) {
+                // RULE: ຖ້າມີການຄອມເມັນແລ້ວແມ່ນບໍ່ສາມາດຄອມເມັນຕໍ່ໄປໄດ້ ແລະ ໃຫ້ໂນດໄວ້ເລີຍວ່າ "ເປຍແລ້ວ + ເອົາເວລາທີ່ໂນດຄັ້ງແລກໃສ່"
+                const createdDateObj = firstCommentRecord.created_at ? new Date(firstCommentRecord.created_at) : new Date();
+                
+                // Format timestamp DD/MM/YYYY HH:mm:ss
+                const day = String(createdDateObj.getDate()).padStart(2, '0');
+                const month = String(createdDateObj.getMonth() + 1).padStart(2, '0');
+                const year = createdDateObj.getFullYear();
+                const hours = String(createdDateObj.getHours()).padStart(2, '0');
+                const minutes = String(createdDateObj.getMinutes()).padStart(2, '0');
+                const timeStr = `${day}/${month}/${year} ${hours}:${minutes}`;
+
+                const autoNote = `ເປຍແລ້ວ (ໂນດເມື່ອ: ${timeStr})`;
+
+                commentInput.value = autoNote;
+                commentInput.disabled = true; // Lock comment input
+                commentLockStatus.classList.remove('hidden');
+
+                // Set amount to 700,000 Kip due to penalty/bid
+                amountInput.value = '700000';
+                advanceText.innerHTML = `<i class="fa-solid fa-lock text-amber-600 mr-1.5 text-sm"></i> ເປຍແລ້ວ (+ເພີ່ມຍອດເປັນ 700,000 ₭)`;
+                advanceBadge.classList.remove('hidden');
+
+            } else {
+                // Normal Mode: Unlock comment input
+                commentInput.disabled = false;
+                commentInput.value = '';
+                commentLockStatus.classList.add('hidden');
+
+                if (isAdvance) {
+                    // Condition: Advance payment -> 700,000 Kips
+                    amountInput.value = '700000';
+                    advanceText.innerHTML = `<i class="fa-solid fa-bolt text-amber-500 mr-1.5 text-sm"></i> ຈ່າຍກ່ອນກຳນົດ (+ເພີ່ມຍອດເປັນ 700,000 ₭)`;
+                    advanceBadge.classList.remove('hidden');
+                } else {
+                    // Normal sequential payment -> 500,000 Kips
+                    amountInput.value = '500000';
+                    advanceBadge.classList.add('hidden');
+                }
+            }
+
+            // Focus Save Button directly
+            const btnSave = document.getElementById('btn-save');
+            if (btnSave && !btnSave.disabled) {
+                btnSave.focus();
+            }
+        }
+
+        function handleDateSelectFromDropdown() {
+            onDatePicked();
+        }
+
+        // Validate completion status (40 days max rule)
+        function updateRuleStatusUI() {
+            const box = document.getElementById('rule-status-box');
+            const icon = document.getElementById('rule-icon');
+            const text = document.getElementById('rule-text');
+            const btnSave = document.getElementById('btn-save');
+            const dropdown = document.getElementById('select-date-dropdown');
+
+            const totalSaved = existingTxDates.length;
+
+            if (totalSaved >= 40) {
+                // RULE: ຖ້າຄົບ 40 ວັນແລ້ວ ແມ່ນສຳເລັດ ເມື່ອສຳເລັດບໍ່ສາມາດເກັບວັນຕໍໄປໄດ້
+                box.className = "p-3 rounded-xl text-xs flex items-start space-x-2 border bg-emerald-50 border-emerald-200 text-emerald-800 shadow-sm";
+                icon.className = "fa-solid fa-circle-check text-emerald-600 text-lg mt-0.5";
+                text.innerHTML = `<strong class="text-sm">🎉 ຈ່າຍຄົບ 40 ວັນແລ້ວ ສຳເລັດ!</strong><br>ເກັບເງິນຄົບຕາມກໍານົດ 40 ວັນແລ້ວ ບໍ່ສາມາດເກັບວັນຕໍ່ໄປໄດ້.`;
+                btnSave.disabled = true;
+                dropdown.disabled = true;
+            } else {
+                box.className = "p-3 rounded-xl text-xs flex items-start space-x-2 border bg-indigo-50 border-indigo-200 text-indigo-800";
+                icon.className = "fa-solid fa-clock text-indigo-600 text-base mt-0.5";
+                text.innerHTML = `ເກັບໄປແລ້ວ <strong>${totalSaved} / 40</strong> ວັນ. (ຍັງເຫຼືອ <strong>${40 - totalSaved}</strong> ວັນ)`;
+                btnSave.disabled = false;
+                dropdown.disabled = false;
+            }
+        }
+
+        // Validate single date input (Check duplicate date)
+        function validateDateRules() {
+            if (existingTxDates.length >= 40) return;
+
+            const dropdown = document.getElementById('select-date-dropdown');
+            const selectedDate = dropdown.value;
+            const btnSave = document.getElementById('btn-save');
+            const dateHint = document.getElementById('date-hint');
+
+            if (!selectedDate) {
+                dateHint.innerHTML = `<span class="text-red-500">ກະລຸນາເລືອກວັນທີ</span>`;
+                btnSave.disabled = true;
+                return;
+            }
+
+            // Check if date is already recorded
+            if (existingTxDates.includes(selectedDate)) {
+                dateHint.innerHTML = `<span class="text-red-600 font-semibold"><i class="fa-solid fa-circle-xmark"></i> ວັນທີນີ້ໄດ້ບັນທຶກເກັບເງິນໄປແລ້ວ!</span>`;
+                btnSave.disabled = true;
+                return;
+            }
+
+            dateHint.innerHTML = `<span class="text-emerald-600 font-medium"><i class="fa-solid fa-circle-check"></i> ວັນທີພ້ອມສໍາລັບການບັນທຶກ</span>`;
+            btnSave.disabled = false;
+        }
+
+        // Save Transaction to Supabase
+        async function handleSaveTransaction(e) {
+            e.preventDefault();
+
+            if (existingTxDates.length >= 40) {
+                showToast("ສຳເລັດແລ້ວ", "ຈ່າຍຄົບ 40 ວັນແລ້ວ ບໍ່ສາມາດເກັບວັນຕໍ່ໄປໄດ້!", "fa-solid fa-circle-check", true);
+                return;
+            }
+
+            showLoading('ກໍາລັງບັນທຶກການເກັບເງິນ...');
+            const dropdown = document.getElementById('select-date-dropdown');
+            const dateVal = dropdown.value;
+            const amountVal = parseFloat(document.getElementById('input-amount').value);
+            const commentInput = document.getElementById('input-comment');
+            const commentVal = commentInput.value;
+
+            const btnSave = document.getElementById('btn-save');
+            btnSave.disabled = true;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('transaction_detail')
+                    .insert([
+                        {
+                            hid: selectedH.hid,
+                            userid: selectedUser.userid,
+                            date: dateVal,
+                            amount: amountVal,
+                            comment: commentVal
+                        }
+                    ]);
+
+                if (error) throw error;
+
+                if (!commentInput.disabled) {
+                    commentInput.value = '';
+                }
+
+                await fetchTransactionHistory();
+
+                if (existingTxDates.length >= 40) {
+                    showToast("🎉 ງວດນີ້ສຳເລັດແລ້ວ!", "ລູກຄ້າຈ່າຍຄົບ 40 ວັນແລ້ວ! ລະບົບໄດ້ປິດການເກັບເງິນໃນງວດນີ້.", "fa-solid fa-trophy", true);
+                } else {
+                    showToast("ສຳເລັດ", "ບັນທຶກຂໍ້ມູນການເກັບເງິນສຳເລັດແລ້ວ!", "fa-solid fa-circle-check", true);
+                }
+
+            } catch (err) {
+                console.error(err);
+                showToast("ບັນທຶກບໍ່ສຳເລັດ", err.message, "fa-solid fa-triangle-exclamation", false);
+            } finally {
+                hideLoading();
+                btnSave.disabled = false;
+            }
+        }
+
+        // Utility: Escape HTML
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
