@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ສູນລວມເມນູນຳທາງ — ເວັບໄຊ, ຈັດຫາພະນັກງານ &amp; ຮ້ານ</title>
+  <!-- PWA Meta Tags for Standalone App & Home Screen / Shortcut Support -->
+  <meta name="theme-color" content="#14223b" />
+  <meta name="background-color" content="#f4f7fb" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ເມນູນຳທາງ" />
+  <meta name="application-name" content="ເມນູນຳທາງ" />
+  <meta name="description" content="ສູນລວມເມນູນຳທາງສຳລັບ ເມນູເວັບໄຊ, ເມນູຈັດຫາພະນັກງານ ແລະ ເມນູຮ້ານ ຮອງຮັບການຕິດຕັ້ງເປັນແອັບ (PWA)" />
+  <link id="pwa-manifest-link" rel="manifest" />
+  <link id="pwa-apple-icon" rel="apple-touch-icon" />
+  <link id="pwa-favicon-icon" rel="icon" type="image/png" />
+  <!-- Load Google Font Noto Sans Lao & Inter for crisp Lao + Latin typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Lao:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Load Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans Lao"', '"Phetsarath OT"', '"Inter"', 'sans-serif'],
+          },
+          colors: {
+            hub: {
+              50: '#f4f7fb',
+              100: '#e6eef8',
+              200: '#c7d9f0',
+              300: '#97bae3',
+              400: '#5f94d3',
+              500: '#3a75be',
+              600: '#295aa0',
+              700: '#224881',
+              800: '#1f3e6c',
+              900: '#1f365b',
+              950: '#14223b',
+            },
+            accent: {
+              50: '#f0fdf7',
+              100: '#dcfce9',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          },
+          boxShadow: {
+            'soft': '0 4px 20px -2px rgba(20, 34, 59, 0.06), 0 2px 6px -1px rgba(20, 34, 59, 0.04)',
+            'card': '0 12px 28px -10px rgba(20, 34, 59, 0.12)',
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Custom typography & smooth transitions */
+    body {
+      font-family: 'Noto Sans Lao', 'Phetsarath OT', 'Inter', sans-serif;
+      background-color: #f4f7fb;
+      color: #14223b;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    @keyframes fadeSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-page-in {
+      animation: fadeSlideIn 0.22s ease-out forwards;
+    }
+
+    @keyframes fadeToast {
+      0% { opacity: 0; transform: translate(-50%, 10px); }
+      15% { opacity: 1; transform: translate(-50%, 0); }
+      85% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -8px); }
+    }
+    .animate-toast {
+      animation: fadeToast 2.1s ease-in-out forwards;
+    }
+
+    /* Forced viewport mode styling when user selects 'phone' or 'desktop' manually */
+    .forced-phone-wrapper {
+      background: radial-gradient(circle at top, #273e63 0%, #0f192b 100%);
+      min-height: calc(100vh - 68px);
+      padding: 24px 12px 40px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .forced-phone-frame {
+      width: 100%;
+      max-width: 412px;
+      min-height: 760px;
+      max-height: 880px;
+      border-radius: 38px;
+      border: 10px solid #101a2d;
+      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55), inset 0 0 0 2px rgba(255,255,255,0.08);
+      overflow-y: auto;
+      overflow-x: hidden;
+      position: relative;
+      background-color: #f4f7fb;
+    }
+
+    /* Standalone installed app mode refinements */
+    body.pwa-standalone .vp-switcher-wrap {
+      border-bottom-color: rgba(16, 185, 129, 0.35);
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-hub-200 selection:text-hub-950">
+  <!-- App Root Container -->
+  <div id="app" class="min-h-screen flex flex-col"></div>
+
+  <!-- Toast Notification Banner -->
+  <div id="toast-container" class="fixed bottom-20 left-1/2 z-50 pointer-events-none"></div>
+
+  <!-- Custom Modal / Message Box (replaces alert/confirm) -->
+  <div id="modal-backdrop" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs items-center justify-center p-4">
+    <div id="modal-box" class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-hub-100"></div>
+  </div>
+
+  <script>
+    /**
+     * Lao Navigation Menu Hub Application (ເມນູນຳທາງ)
+     * Organizes navigable sub-pages across 3 core groups:
+     * 1. ເມນູເວັບໄຊ (Website Menu): ໜ້າຫຼັກ, ບໍລິການ, ຜົນງານ, ກ່ຽວກັບເຮົາ, ຕິດຕໍ່
+     * 2. ເມນູຈັດຫາພະນັກງານ (HR / Recruitment Menu): ປະກາດຮັບສະໝັກ, ລາຍຊື່ຜູ້ສະໝັກ, ນັດສຳພາດ, ສັນຍາຈ້າງ
+     * 3. ເມນູຮ້ານ (Store Management Menu): ຈັດການສິນຄ້າ, ຍອດຂາຍ, ສາງສິນຄ້າ, ລູກຄ້າສະມາຊິກ
+     */
+
+    // --- Navigation Groups & Sub-Pages Data ---
+    const MENU_GROUPS = [
+      {
+        id: 'website',
+        title: 'ເມນູເວັບໄຊ',
+        subtitle: 'ໜ້າເວັບຫຼັກ, ບໍລິການ ແລະ ຂໍ້ມູນອົງກອນ',
+        icon: '🌐',
+        badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+        accentBg: 'from-blue-600 to-indigo-700',
+        pages: [
+          {
+            id: 'web-home',
+            groupId: 'website',
+            title: 'ໜ້າຫຼັກ',
+            subtitle: 'ພາບລວມລະບົບ, ຂ່າວສານປະຈຳວັນ ແລະ ທາງລັດໄວ',
+            icon: '🏠',
+            badge: 'ຫຼັກ',
+            summary: 'ຍິນດີຕ້ອນຮັບສູ່ລະບົບຈັດການ ແລະ ເມນູນຳທາງຫຼັກຂອງອົງກອນ ທີ່ເຊື່ອມຕໍ່ຂໍ້ມູນເວັບໄຊ, ການຈັດຫາພະນັກງານ ແລະ ການດຳເນີນງານຮ້ານຄ້າເຂົ້າດ້ວຍກັນ.',
+            stats: [
+              { label: 'ຜູ້ເຂົ້າຊົມເວັບມື້ນີ້', value: '1,480', delta: '+14%' },
+              { label: 'ຕຳແໜ່ງເປີດຮັບ', value: '5 ຕຳແໜ່ງ', delta: 'ກຳລັງຮັບ' },
+              { label: 'ຍອດຂາຍຮ້ານມື້ນີ້', value: '4,850,000 ₭', delta: '+9.2%' },
+            ],
+            highlights: [
+              { title: 'ເປີດສາຂາໃໝ່ ໃຈກາງນະຄອນຫຼວງວຽງຈັນ', detail: 'ພ້ອມລະບົບສັ່ງຊື້ ແລະ ຈັດການສະຕັອກແບບເວລາຈິງ', status: 'ປະກາດໃໝ່' },
+              { title: 'ອັບເດດໂຄງສ້າງເງິນເດືອນ ແລະ ສະຫວັດດີການ', detail: 'ສຳລັບພະນັກງານປະຈຳ ແລະ ພະນັກງານທົດລອງງານ', status: 'HR' },
+            ],
+            actions: [
+              { label: 'ໄປໜ້າ ບໍລິການ', targetPageId: 'web-services', primary: true },
+              { label: 'ເບິ່ງ ຍອດຂາຍຮ້ານ', targetPageId: 'store-sales', primary: false },
+            ]
+          },
+          {
+            id: 'web-services',
+            groupId: 'website',
+            title: 'ບໍລິການ',
+            subtitle: 'ລາຍການບໍລິການຫຼັກທີ່ເປີດໃຫ້ລູກຄ້າ ແລະ ຄູ່ຄ້າ',
+            icon: '🛠️',
+            badge: '5 ບໍລິການ',
+            summary: 'ໃຫ້ບໍລິການແກ້ໄຂບັນຫາທຸລະກິດ, ການຈັດສົ່ງສິນຄ້າທົ່ວນະຄອນຫຼວງວຽງຈັນ ແລະ ໃຫ້ຄຳປຶກສາດ້ານການຈັດການຮ້ານຄ້າ.',
+            stats: [
+              { label: 'ແພັກເກດບໍລິການ', value: '5 ແພັກເກດ', delta: 'ພ້ອມໃຊ້' },
+              { label: 'ຄວາມພຶງພໍໃຈລູກຄ້າ', value: '98.4%', delta: '+2.1%' },
+              { label: 'ເວລາຕອບກັບສະເລ່ຍ', value: '< 15 ນາທີ', delta: 'ໄວ' },
+            ],
+            highlights: [
+              { title: 'ບໍລິການຈັດສົ່ງດ່ວນພາຍໃນມື້', detail: 'ຄຸ້ມຄອງທຸກເຂດໃນນະຄອນຫຼວງວຽງຈັນ ຕິດຕາມສະຖານະໄດ້', status: 'ຍອດນິຍົມ' },
+              { title: 'ບໍລິການສັ່ງຊື້ສຳລັບອົງກອນ (B2B)', detail: 'ອອກໃບບິນ VAT ແລະ ໃຫ້ສິນເຊື່ອຕາມເງື່ອນໄຂ', status: 'ອົງກອນ' },
+            ],
+            actions: [
+              { label: 'ເບິ່ງ ຜົນງານທີ່ຜ່ານມາ', targetPageId: 'web-portfolio', primary: true },
+              { label: 'ຕິດຕໍ່ສອບຖາມ', targetPageId: 'web-contact', primary: false },
+            ]
+          },
+          {
+            id: 'web-portfolio',
+            groupId: 'website',
+            title: 'ຜົນງານ',
+            subtitle: 'ໂຄງການທີ່ສຳເລັດແລ້ວ ແລະ ຄວາມໄວ້ວາງໃຈຈາກລູກຄ້າ',
+            icon: '🏆',
+            badge: 'ໂຄງການ',
+            summary: 'ລວບລວມຜົນງານ ແລະ ໂຄງການທີ່ທີມງານໄດ້ດຳເນີນການສຳເລັດຕາມເປົ້າໝາຍ ທັງພາກລັດ, ທຸລະກິດຂະໜາດກາງ ແລະ ຮ້ານຄ້າທ້ອງຖິ່ນ.',
+            stats: [
+              { label: 'ໂຄງການສຳເລັດ', value: '64 ໂຄງການ', delta: 'ປີນີ້' },
+              { label: 'ລູກຄ້າກັບມາໃຊ້ຊ້ຳ', value: '86%', delta: 'ສູງ' },
+              { label: 'ຄະແນນປະເມີນ', value: '4.9 / 5.0', delta: 'ດີເລີດ' },
+            ],
+            highlights: [
+              { title: 'ລະບົບຈັດການຮ້ານຄ້າ 12 ສາຂາ', detail: 'ເຊື່ອມຕໍ່ຂໍ້ມູນສາງສິນຄ້າ ແລະ ຍອດຂາຍແບບລວມສູນ', status: 'ສຳເລັດ' },
+              { title: 'ແຄມເປນເປີດຕົວສິນຄ້າພື້ນເມືອງລາວ', detail: 'ສົ່ງເສີມຜະລິດຕະພັນຊຸມຊົນສູ່ຕະຫຼາດທັນສະໄໝ', status: 'ສຳເລັດ' },
+            ],
+            actions: [
+              { label: 'ກ່ຽວກັບທີມງານເຮົາ', targetPageId: 'web-about', primary: true },
+              { label: 'ຂໍໃບສະເໜີລາຄາ', targetPageId: 'web-contact', primary: false },
+            ]
+          },
+          {
+            id: 'web-about',
+            groupId: 'website',
+            title: 'ກ່ຽວກັບເຮົາ',
+            subtitle: 'ວິໄສທັດ, ພາລະກິດ ແລະ ວັດທະນະທຳການເຮັດວຽກ',
+            icon: 'ℹ️',
+            badge: 'ອົງກອນ',
+            summary: 'ພວກເຮົາມຸ່ງໝັ້ນສ້າງມາດຕະຖານການບໍລິການທີ່ໂປ່ງໃສ ວ່ອງໄວ ແລະ ເປັນມິດ ໂດຍໃຫ້ຄວາມສຳຄັນກັບບຸກຄະລາກອນ ແລະ ຄຸນນະພາບສິນຄ້າ.',
+            stats: [
+              { label: 'ປີທີ່ດຳເນີນງານ', value: '6 ປີ', delta: 'ໝັ້ນຄົງ' },
+              { label: 'ພະນັກງານທັງໝົດ', value: '42 ຄົນ', delta: 'ທີມງານ' },
+              { label: 'ສາຂາທີ່ເປີດ', value: '3 ສາຂາ', delta: 'ວຽງຈັນ' },
+            ],
+            highlights: [
+              { title: 'ວິໄສທັດ (Vision)', detail: 'ເປັນຜູ້ນຳດ້ານການບໍລິການ ແລະ ການຈັດການຮ້ານທີ່ທັນສະໄໝໃນລາວ', status: 'ຫຼັກການ' },
+              { title: 'ຄ່ານິຍົມອົງກອນ', detail: 'ຊື່ສັດ • ຮ່ວມມື • ພັດທະນາບໍ່ຢຸດຢັ້ງ • ໃສ່ໃຈລູກຄ້າ', status: 'ວັດທະນະທຳ' },
+            ],
+            actions: [
+              { label: 'ເບິ່ງ ປະກາດຮັບສະໝັກ', targetPageId: 'hr-jobs', primary: true },
+              { label: 'ຕິດຕໍ່ສຳນັກງານ', targetPageId: 'web-contact', primary: false },
+            ]
+          },
+          {
+            id: 'web-contact',
+            groupId: 'website',
+            title: 'ຕິດຕໍ່',
+            subtitle: 'ຊ່ອງທາງຕິດຕໍ່ສື່ສານ, ທີ່ຕັ້ງ ແລະ ເວລາເຮັດການ',
+            icon: '📞',
+            badge: 'ຕິດຕໍ່',
+            summary: 'ຕິດຕໍ່ທີມງານໄດ້ໂດຍກົງຜ່ານໂທລະສັບ, ອີເມວ ຫຼື ເຂົ້າມາພົບທີ່ສຳນັກງານໃຫຍ່ ຖະໜົນລ້ານຊ້າງ, ນະຄອນຫຼວງວຽງຈັນ.',
+            stats: [
+              { label: 'ສາຍດ່ວນບໍລິການ', value: '020 5555 8899', delta: 'ທຸກມື້' },
+              { label: 'ອີເມວທາງການ', value: 'hello@laohub.la', delta: 'ຕອບໄວ' },
+              { label: 'ເວລາເປີດເຮັດການ', value: '08:00 - 20:00', delta: 'ຈັນ-ເສົາ' },
+            ],
+            highlights: [
+              { title: 'ສຳນັກງານໃຫຍ່ (Head Office)', detail: 'ບ້ານ ຫັດສະດີ, ເມືອງ ຈັນທະບູລີ, ນະຄອນຫຼວງວຽງຈັນ', status: 'ທີ່ຕັ້ງ' },
+              { title: 'ຝ່າຍຊັບພະຍາກອນມະນຸດ (HR)', detail: 'ສອບຖາມເລື່ອງສະໝັກວຽກ ແລະ ຝຶກງານ ໂທ 020 9988 1122', status: 'HR' },
+            ],
+            actions: [
+              { label: 'ສົ່ງຂໍ້ຄວາມຫາທີມງານ', targetPageId: 'web-home', primary: true, isMessageTrigger: true },
+            ]
+          }
+        ]
+      },
+      {
+        id: 'hr',
+        title: 'ເມນູຈັດຫາພະນັກງານ',
+        subtitle: 'ຮັບສະໝັກງານ, ຄັດເລືອກຜູ້ສະໝັກ, ສຳພາດ ແລະ ສັນຍາ',
+        icon: '👥',
+        badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        accentBg: 'from-emerald-600 to-teal-700',
+        pages: [
+          {
+            id: 'hr-jobs',
+            groupId: 'hr',
+            title: 'ປະກາດຮັບສະໝັກ',
+            subtitle: 'ຕຳແໜ່ງງານທີ່ເປີດຮັບສະໝັກ ແລະ ເງື່ອນໄຂພື້ນຖານ',
+            icon: '📢',
+            badge: '5 ຕຳແໜ່ງ',
+            summary: 'ຈັດການປະກາດຮັບສະໝັກພະນັກງານໃໝ່ ລະບຸເງິນເດືອນເລີ່ມຕົ້ນ, ສະຫວັດດີການ ແລະ ສະຖານະການເປີດຮັບແຕ່ລະຕຳແໜ່ງ.',
+            stats: [
+              { label: 'ຕຳແໜ່ງເປີດຮັບ', value: '5 ຕຳແໜ່ງ', delta: 'ດ່ວນ 2' },
+              { label: 'ໃບສະໝັກເຂົ້າມາ', value: '38 ໃບ', delta: 'ອາທິດນີ້' },
+              { label: 'ຕຳແໜ່ງວ່າງທັງໝົດ', value: '8 ອັດຕາ', delta: 'HR' },
+            ],
+            highlights: [
+              { title: 'ພະນັກງານບໍລິການ & ຄິດເງິນຮ້ານ (POS)', detail: 'ເງິນເດືອນ 3,200,000 – 4,500,000 ₭ + ໂບນັດ • ຮັບ 3 ຕຳແໜ່ງ', status: 'ເປີດຮັບ' },
+              { title: 'ພະນັກງານຈັດການສາງສິນຄ້າ', detail: 'ເງິນເດືອນ 3,800,000 – 5,000,000 ₭ • ຮັບ 2 ຕຳແໜ່ງ', status: 'ຮັບດ່ວນ' },
+            ],
+            actions: [
+              { label: 'ເບິ່ງ ລາຍຊື່ຜູ້ສະໝັກ', targetPageId: 'hr-applicants', primary: true },
+              { label: 'ໄປໜ້າ ນັດສຳພາດ', targetPageId: 'hr-interviews', primary: false },
+            ]
+          },
+          {
+            id: 'hr-applicants',
+            groupId: 'hr',
+            title: 'ລາຍຊື່ຜູ້ສະໝັກ',
+            subtitle: 'ກວດສອບປະຫວັດ, ຄະແນນຄັດເລືອກ ແລະ ສະຖານະຜູ້ສະໝັກ',
+            icon: '📋',
+            badge: '38 ຄົນ',
+            summary: 'ຕິດຕາມລາຍຊື່ຜູ້ສະໝັກງານທັງໝົດ ຈັດກຸ່ມຕາມຂັ້ນຕອນການພິຈາລະນາ ເພື່ອໃຫ້ທີມ HR ຄັດເລືອກໄດ້ຢ່າງເປັນລະບົບ.',
+            stats: [
+              { label: 'ຜູ້ສະໝັກໃໝ່', value: '14 ຄົນ', delta: 'ລໍຖ້າກວດ' },
+              { label: 'ຜ່ານການຄັດເລືອກເບື້ອງຕົ້ນ', value: '16 ຄົນ', delta: '42%' },
+              { label: 'ຜ່ານສຳພາດແລ້ວ', value: '8 ຄົນ', delta: 'ພ້ອມເຊັນ' },
+            ],
+            highlights: [
+              { title: 'ນາງ ວັນນາ ສີປະເສີດ — ສະໝັກຕຳແໜ່ງ ຄິດເງິນຮ້ານ', detail: 'ປະສົບການ 2 ປີ ໃຊ້ລະບົບ POS ແລະ ບັນຊີພື້ນຖານໄດ້ດີ', status: 'ຜ່ານຄັດເລືອກ' },
+              { title: 'ທ້າວ ບຸນມີ ໄຊຍະວົງ — ສະໝັກຕຳແໜ່ງ ຈັດການສາງ', detail: 'ມີຄວາມລະອຽດ ຂັບລົດສົ່ງຂອງໄດ້ ແລະ ພ້ອມເລີ່ມງານທັນທີ', status: 'ນັດສຳພາດແລ້ວ' },
+            ],
+            actions: [
+              { label: 'ຈັດຕາຕະລາງ ນັດສຳພາດ', targetPageId: 'hr-interviews', primary: true },
+              { label: 'ກວດສອບ ສັນຍາຈ້າງ', targetPageId: 'hr-contracts', primary: false },
+            ]
+          },
+          {
+            id: 'hr-interviews',
+            groupId: 'hr',
+            title: 'ນັດສຳພາດ',
+            subtitle: 'ຕາຕະລາງນັດໝາຍສຳພາດງານ, ຜູ້ສຳພາດ ແລະ ສະຖານທີ່',
+            icon: '🗓️',
+            badge: '7 ນັດໝາຍ',
+            summary: 'ຈັດການນັດສຳພາດຜູ້ສະໝັກໃນແຕ່ລະມື້ ພ້ອມລະບຸເວລາ ຫ້ອງສຳພາດ ແລະ ຜູ້ຮັບຜິດຊອບການສຳພາດ.',
+            stats: [
+              { label: 'ນັດສຳພາດມື້ນີ້', value: '4 ຄົນ', delta: '09:00-16:00' },
+              { label: 'ນັດອາທິດນີ້', value: '7 ຄົນ', delta: 'ຄົບຖ້ວນ' },
+              { label: 'ອັດຕາເຂົ້າສຳພາດ', value: '92%', delta: 'ດີຫຼາຍ' },
+            ],
+            highlights: [
+              { title: '10:30 ໂມງ • ຫ້ອງປະຊຸມ A — ນາງ ວັນນາ ສີປະເສີດ', detail: 'ສຳພາດຕຳແໜ່ງ ຄິດເງິນຮ້ານ ກັບ ຜູ້ຈັດການສາຂາ', status: 'ມື້ນີ້' },
+              { title: '14:00 ໂມງ • ຫ້ອງປະຊຸມ B — ທ້າວ ບຸນມີ ໄຊຍະວົງ', detail: 'ສຳພາດຕຳແໜ່ງ ຈັດການສາງ ກັບ ຫົວໜ້າຝ່າຍປະຕິບັດການ', status: 'ມື້ນີ້' },
+            ],
+            actions: [
+              { label: 'ເບິ່ງ ລາຍຊື່ຜູ້ສະໝັກ', targetPageId: 'hr-applicants', primary: true },
+              { label: 'ໄປໜ້າ ສັນຍາຈ້າງ', targetPageId: 'hr-contracts', primary: false },
+            ]
+          },
+          {
+            id: 'hr-contracts',
+            groupId: 'hr',
+            title: 'ສັນຍາຈ້າງ',
+            subtitle: 'ສັນຍາທົດລອງງານ, ສັນຍາປະຈຳ ແລະ ການຕໍ່ສັນຍາ',
+            icon: '📄',
+            badge: '3 ລໍຖ້າເຊັນ',
+            summary: 'ຕິດຕາມສະຖານະສັນຍາຈ້າງງານຂອງພະນັກງານໃໝ່ ແລະ ພະນັກງານປັດຈຸບັນ ລວມທັງວັນເລີ່ມງານ ແລະ ໄລຍະທົດລອງງານ.',
+            stats: [
+              { label: 'ສັນຍາທີ່ມີຜົນ', value: '42 ສະບັບ', delta: 'ຄົບຖ້ວນ' },
+              { label: 'ລໍຖ້າລົງນາມ', value: '3 ສະບັບ', delta: 'ອາທິດນີ້' },
+              { label: 'ໃກ້ຄົບກຳນົດທົດລອງ', value: '2 ຄົນ', delta: '15 ວັນ' },
+            ],
+            highlights: [
+              { title: 'ສັນຍາທົດລອງງານ 90 ວັນ — ຕຳແໜ່ງ ພະນັກງານຮ້ານ', detail: 'ກຳນົດເລີ່ມວຽກວັນທີ 1 ທັນວາ 2026 • ສະຫວັດດີການຄົບ', status: 'ລໍຖ້າເຊັນ' },
+              { title: 'ປັບເປັນພະນັກງານປະຈຳ — ພະແນກສາງສິນຄ້າ', detail: 'ຜ່ານການປະເມີນຜົນງານລະດັບດີ ພ້ອມປັບເງິນເດືອນ', status: 'ອະນຸມັດແລ້ວ' },
+            ],
+            actions: [
+              { label: 'ກັບໄປ ປະກາດຮັບສະໝັກ', targetPageId: 'hr-jobs', primary: true },
+            ]
+          }
+        ]
+      },
+      {
+        id: 'store',
+        title: 'ເມນູຮ້ານ',
+        subtitle: 'ຈັດການສິນຄ້າ, ຍອດຂາຍ, ສາງສິນຄ້າ ແລະ ສະມາຊິກ',
+        icon: '🏪',
+        badgeColor: 'bg-amber-100 text-amber-900 border-amber-200',
+        accentBg: 'from-amber-600 to-orange-700',
+        pages: [
+          {
+            id: 'store-products',
+            groupId: 'store',
+            title: 'ຈັດການສິນຄ້າ',
+            subtitle: 'ລາຍການສິນຄ້າໃນຮ້ານ, ລາຄາຂາຍ (ກີບ) ແລະ ໝວດໝູ່',
+            icon: '📦',
+            badge: '124 ລາຍການ',
+            summary: 'ເພີ່ມ ແກ້ໄຂ ແລະ ຈັດລະບຽບລາຍການສິນຄ້າທີ່ວາງຂາຍໃນຮ້ານ ພ້ອມກວດສອບລາຄາ ແລະ ສະຖານະການວາງຈຳໜ່າຍ.',
+            stats: [
+              { label: 'ສິນຄ້າທັງໝົດ', value: '124 ລາຍການ', delta: 'ເປີດຂາຍ 118' },
+              { label: 'ສິນຄ້າຂາຍດີສຸດ', value: 'ກາເຟຄົ້ວບົດ', delta: 'ອັນດັບ 1' },
+              { label: 'ປັບລາຄາອາທິດນີ້', value: '6 ລາຍການ', delta: 'ອັບເດດແລ້ວ' },
+            ],
+            highlights: [
+              { title: 'ກາເຟລາວ ພູພຽງບໍລະເວນ (250g) • 55,000 ₭', detail: 'ໝວດ: ເຄື່ອງດື່ມ & ກາເຟ • ສະຖານະ: ພ້ອມຂາຍ', status: 'ຂາຍດີ' },
+              { title: 'ຊຸດຂອງຂວັນຜະລິດຕະພັນລາວ • 185,000 ₭', detail: 'ໝວດ: ຊຸດພິເສດ • ສະຖານະ: ພ້ອມຂາຍ', status: 'ແນະນຳ' },
+            ],
+            actions: [
+              { label: 'ເບິ່ງ ຍອດຂາຍ', targetPageId: 'store-sales', primary: true },
+              { label: 'ກວດ ສາງສິນຄ້າ', targetPageId: 'store-inventory', primary: false },
+            ]
+          },
+          {
+            id: 'store-sales',
+            groupId: 'store',
+            title: 'ຍອດຂາຍ',
+            subtitle: 'ສະຫຼຸບຍອດຂາຍປະຈຳວັນ, ຈຳນວນບິນ ແລະ ຊ່ອງທາງຊຳລະ',
+            icon: '📊',
+            badge: 'ມື້ນີ້',
+            summary: 'ຕິດຕາມລາຍຮັບ ແລະ ຈຳນວນອໍເດີຂອງຮ້ານແບບຊັດເຈນ ແຍກຕາມການຊຳລະເງິນສົດ, ໂອນຜ່ານທະນາຄານ (QR) ແລະ ບັດສະມາຊິກ.',
+            stats: [
+              { label: 'ຍອດຂາຍມື້ນີ້', value: '4,850,000 ₭', delta: '+9.2%' },
+              { label: 'ຈຳນວນບິນທັງໝົດ', value: '76 ບິນ', delta: 'ສະເລ່ຍ 63.8k' },
+              { label: 'ຊຳລະຜ່ານ QR / ໂອນ', value: '68%', delta: 'ນິຍົມສຸດ' },
+            ],
+            highlights: [
+              { title: 'ຊ່ວງເວລາຂາຍດີທີ່ສຸດ (Peak Hours)', detail: '09:00 – 11:30 ໂມງ ແລະ 16:30 – 18:30 ໂມງ', status: 'ວິເຄາະ' },
+              { title: 'ບິນລ່າສຸດ #INV-2026-076 • 145,000 ₭', detail: 'ຊຳລະຜ່ານ QR ທະນາຄານ • ສຳເລັດແລ້ວ', status: 'ສຳເລັດ' },
+            ],
+            actions: [
+              { label: 'ເບິ່ງ ລູກຄ້າສະມາຊິກ', targetPageId: 'store-members', primary: true },
+              { label: 'ຈັດການສິນຄ້າ', targetPageId: 'store-products', primary: false },
+            ]
+          },
+          {
+            id: 'store-inventory',
+            groupId: 'store',
+            title: 'ສາງສິນຄ້າ',
+            subtitle: 'ກວດສອບຈຳນວນຄົງຄັງ, ສິນຄ້າໃກ້ໝົດ ແລະ ການນຳເຂົ້າ',
+            icon: '🏭',
+            badge: '4 ໃກ້ໝົດ',
+            summary: 'ຄວບຄຸມປະລິມານສິນຄ້າໃນສາງຫຼັກ ແລະ ໜ້າຮ້ານ ແຈ້ງເຕືອນລາຍການທີ່ໃກ້ໝົດສະຕັອກເພື່ອສັ່ງຊື້ເພີ່ມໄດ້ທັນເວລາ.',
+            stats: [
+              { label: 'ມູນຄ່າສາງລວມ', value: '38,400,000 ₭', delta: 'ປົກກະຕິ' },
+              { label: 'ສິນຄ້າໃກ້ໝົດ', value: '4 ລາຍການ', delta: 'ຕ້ອງເຕີມ' },
+              { label: 'ຮັບເຂົ້າສາງອາທິດນີ້', value: '3 ຄັ້ງ', delta: 'ຄົບຖ້ວນ' },
+            ],
+            highlights: [
+              { title: 'ແກ້ວເກັບຄວາມຮ້ອນສີຄີມ • ເຫຼືອ 6 ໜ່ວຍ', detail: 'ຈຸດສັ່ງຊື້ຄືນ (Reorder Point): 15 ໜ່ວຍ', status: 'ໃກ້ໝົດ' },
+              { title: 'ເມັດກາເຟຄົ້ວອ່ອນ • ເຫຼືອ 8 ຖົງ', detail: 'ຈຸດສັ່ງຊື້ຄືນ (Reorder Point): 12 ຖົງ', status: 'ໃກ້ໝົດ' },
+            ],
+            actions: [
+              { label: 'ໄປໜ້າ ຈັດການສິນຄ້າ', targetPageId: 'store-products', primary: true },
+              { label: 'ເບິ່ງ ຍອດຂາຍ', targetPageId: 'store-sales', primary: false },
+            ]
+          },
+          {
+            id: 'store-members',
+            groupId: 'store',
+            title: 'ລູກຄ້າສະມາຊິກ',
+            subtitle: 'ຖານຂໍ້ມູນສະມາຊິກ, ຄະແນນສະສົມ ແລະ ລະດັບບັດ',
+            icon: '💳',
+            badge: '312 ຄົນ',
+            summary: 'ຈັດການຂໍ້ມູນລູກຄ້າສະມາຊິກ ຕິດຕາມຄະແນນສະສົມ ແລະ ມອບສິດທິພິເສດໃຫ້ລູກຄ້າປະຈຳຂອງຮ້ານ.',
+            stats: [
+              { label: 'ສະມາຊິກທັງໝົດ', value: '312 ຄົນ', delta: '+18 ເດືອນນີ້' },
+              { label: 'ສະມາຊິກ VIP Gold', value: '46 ຄົນ', delta: 'ສ່ວນຫຼຸດ 10%' },
+              { label: 'ຄະແນນແລກຂອງລາງວັນ', value: '12,450 pts', delta: 'ເຄື່ອນໄຫວ' },
+            ],
+            highlights: [
+              { title: 'ຄຸນ ສົມພອນ ແກ້ວມະນີ (VIP Gold)', detail: 'ຄະແນນສະສົມ: 1,850 ຄະແນນ • ຍອດໃຊ້ຈ່າຍສະສົມ 2,950,000 ₭', status: 'VIP' },
+              { title: 'ຄຸນ ນ້ອຍ ພົມມະຈັນ (Member)', detail: 'ຄະແນນສະສົມ: 620 ຄະແນນ • ຍອດໃຊ້ຈ່າຍສະສົມ 980,000 ₭', status: 'ສະມາຊິກ' },
+            ],
+            actions: [
+              { label: 'ເບິ່ງ ຍອດຂາຍ', targetPageId: 'store-sales', primary: true },
+            ]
+          }
+        ]
+      }
+    ];
+
+    // Flatten helper to find any page & group by pageId
+    function findPageContext(pageId) {
+      for (const grp of MENU_GROUPS) {
+        const found = grp.pages.find((p) => p.id === pageId);
+        if (found) return { group: grp, page: found };
+      }
+      return { group: MENU_GROUPS[0], page: MENU_GROUPS[0].pages[0] };
+    }
+
+    // --- State Management ---
+    const state = {
+      viewportMode: 'auto', // 'auto' | 'phone' | 'desktop'
+      isDesktopEffective: window.innerWidth >= 768,
+      activeGroupId: 'all', // 'all' | 'website' | 'hr' | 'store'
+      activePageId: null, // null means Mobile Menu Hub home; or any pageId like 'web-home', 'hr-jobs', 'store-sales'
+      desktopSelectedPageId: 'web-home', // Desktop always displays an active sub-page workspace on the right
+      searchQuery: '',
+      expandedDesktopGroups: {
+        website: true,
+        hr: true,
+        store: true,
+      },
+      // PWA Installability & Standalone State
+      deferredInstallPrompt: null,
+      isStandaloneApp: false,
+      swRegistered: false,
+      installOutcome: null,
+    };
+
+    // --- PWA Icon Generator, Dynamic Manifest & Service Worker Setup ---
+    function generatePwaIconDataUrl(size) {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return '';
+
+        // Deep hub gradient background with rounded corners
+        const r = Math.round(size * 0.22);
+        ctx.beginPath();
+        ctx.roundRect(0, 0, size, size, r);
+        const grad = ctx.createLinearGradient(0, 0, size, size);
+        grad.addColorStop(0, '#3a75be');
+        grad.addColorStop(0.55, '#1f3e6c');
+        grad.addColorStop(1, '#14223b');
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Subtle inner highlight ring
+        ctx.lineWidth = Math.max(2, Math.round(size * 0.02));
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+        ctx.stroke();
+
+        // Compass / Navigation diamond emblem
+        const cx = size * 0.5;
+        const cy = size * 0.44;
+        const rad = size * 0.23;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.beginPath();
+        ctx.arc(0, 0, rad, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+        ctx.fill();
+        ctx.lineWidth = Math.max(2, Math.round(size * 0.018));
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.stroke();
+
+        // North pointer (emerald accent)
+        ctx.beginPath();
+        ctx.moveTo(0, -rad * 0.72);
+        ctx.lineTo(rad * 0.24, 0);
+        ctx.lineTo(-rad * 0.24, 0);
+        ctx.closePath();
+        ctx.fillStyle = '#34d399';
+        ctx.fill();
+
+        // South pointer (warm amber/white)
+        ctx.beginPath();
+        ctx.moveTo(0, rad * 0.72);
+        ctx.lineTo(rad * 0.24, 0);
+        ctx.lineTo(-rad * 0.24, 0);
+        ctx.closePath();
+        ctx.fillStyle = '#f8fafc';
+        ctx.fill();
+
+        // Center pivot dot
+        ctx.beginPath();
+        ctx.arc(0, 0, rad * 0.11, 0, Math.PI * 2);
+        ctx.fillStyle = '#14223b';
+        ctx.fill();
+        ctx.restore();
+
+        // Short Lao badge label near bottom of icon
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${Math.max(12, Math.round(size * 0.13))}px "Noto Sans Lao", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('ເມນູ', cx, size * 0.81);
+
+        return canvas.toDataURL('image/png');
+      } catch (err) {
+        console.warn('PWA icon canvas generation failed:', err);
+        return '';
+      }
+    }
+
+    function setupDynamicPwaManifest() {
+      try {
+        const icon192 = generatePwaIconDataUrl(192);
+        const icon512 = generatePwaIconDataUrl(512);
+
+        const appleLink = document.getElementById('pwa-apple-icon');
+        const favLink = document.getElementById('pwa-favicon-icon');
+        if (appleLink && icon192) appleLink.href = icon192;
+        if (favLink && icon192) favLink.href = icon192;
+
+        const baseHref = window.location.href.split('#')[0].split('?')[0];
+        const icons = [];
+        if (icon192) {
+          icons.push({
+            src: icon192,
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable',
+          });
+        }
+        if (icon512) {
+          icons.push({
+            src: icon512,
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          });
+        }
+
+        const manifestObj = {
+          name: 'ສູນລວມເມນູນຳທາງ — ເວັບໄຊ, ຈັດຫາພະນັກງານ & ຮ້ານ',
+          short_name: 'ເມນູນຳທາງ',
+          description: 'ເມນູນຳທາງສຳລັບ ເມນູເວັບໄຊ, ເມນູຈັດຫາພະນັກງານ ແລະ ເມນູຮ້ານ ໃຊ້ງານໄດ້ທັງໂທລະສັບ ແລະ ຄອມພິວເຕີ',
+          start_url: baseHref,
+          scope: './',
+          display: 'standalone',
+          orientation: 'any',
+          background_color: '#f4f7fb',
+          theme_color: '#14223b',
+          lang: 'lo',
+          categories: ['business', 'productivity', 'utilities'],
+          icons,
+        };
+
+        const manifestBlob = new Blob([JSON.stringify(manifestObj, null, 2)], {
+          type: 'application/manifest+json',
+        });
+        const manifestUrl = URL.createObjectURL(manifestBlob);
+        const manifestLink = document.getElementById('pwa-manifest-link');
+        if (manifestLink) {
+          manifestLink.href = manifestUrl;
+        }
+      } catch (err) {
+        console.warn('Failed to attach dynamic PWA manifest:', err);
+      }
+    }
+
+    function registerDynamicServiceWorker() {
+      if (!('serviceWorker' in navigator)) return;
+      // Service workers require secure context (https or localhost) and same-origin script
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return;
+      }
+
+      try {
+        const swCode = `
+          const CACHE_NAME = 'lao-nav-menu-hub-v1';
+          self.addEventListener('install', (event) => {
+            self.skipWaiting();
+            event.waitUntil(
+              caches.open(CACHE_NAME).then((cache) => {
+                return cache.addAll([self.registration.scope]).catch(() => {});
+              })
+            );
+          });
+
+          self.addEventListener('activate', (event) => {
+            event.waitUntil(
+              caches.keys().then((keys) =>
+                Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+              ).then(() => self.clients.claim())
+            );
+          });
+
+          self.addEventListener('fetch', (event) => {
+            if (event.request.method !== 'GET') return;
+            event.respondWith(
+              fetch(event.request)
+                .then((response) => {
+                  if (response && response.status === 200 && response.type === 'basic') {
+                    const copy = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
+                  }
+                  return response;
+                })
+                .catch(() => caches.match(event.request).then((cached) => cached || caches.match(self.registration.scope)))
+            );
+          });
+        `;
+
+        const swBlob = new Blob([swCode], { type: 'application/javascript' });
+        const swUrl = URL.createObjectURL(swBlob);
+
+        navigator.serviceWorker
+          .register(swUrl, { scope: './' })
+          .then(() => {
+            state.swRegistered = true;
+          })
+          .catch(() => {
+            // Blob SW registration can be blocked in certain sandboxed/preview frames; manual shortcut guide remains available
+            state.swRegistered = false;
+          });
+      } catch (_) {
+        state.swRegistered = false;
+      }
+    }
+
+    function detectStandaloneMode() {
+      const displayStandalone =
+        window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+      const iosStandalone = Boolean(window.navigator.standalone);
+      const isStandalone = Boolean(displayStandalone || iosStandalone);
+      state.isStandaloneApp = isStandalone;
+      document.body.classList.toggle('pwa-standalone', isStandalone);
+      return isStandalone;
+    }
+
+    function detectDevicePlatform() {
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroid = /Android/i.test(ua);
+      const isSafari = /Safari/i.test(ua) && !/Chrome|CriOS|Edg|OPR|Android/i.test(ua);
+      const isEdge = /Edg/i.test(ua);
+      const isChrome = /Chrome|CriOS/i.test(ua) && !isEdge;
+      return { isIOS, isAndroid, isSafari, isEdge, isChrome };
+    }
+
+    function openInstallGuideModal() {
+      const platform = detectDevicePlatform();
+      const canNativePrompt = Boolean(state.deferredInstallPrompt);
+
+      openModal({
+        title: 'ຕິດຕັ້ງແອັບ / ສ້າງທາງລັດ — ເມນູນຳທາງ',
+        primaryText: canNativePrompt ? 'ຕິດຕັ້ງແອັບດຽວນີ້' : 'ເຂົ້າໃຈແລ້ວ',
+        secondaryText: canNativePrompt ? 'ປິດ' : null,
+        bodyHTML: `
+          <div class="space-y-3 text-xs sm:text-sm text-hub-800 leading-relaxed">
+            <div class="p-3 rounded-2xl bg-hub-50 border border-hub-200">
+              <div class="font-bold text-hub-950 mb-0.5">✨ ເປັນຫຍັງຄວນຕິດຕັ້ງເປັນແອັບ (PWA)?</div>
+              <p class="text-xs text-hub-700">ເປີດໃຊ້ງານໄດ້ແບບເຕັມຈໍ (Standalone) ຜ່ານໄອຄອນ <strong>ເມນູນຳທາງ</strong> ໂດຍບໍ່ມີແຖບທີ່ຢູ່ເວັບໄຊມາບັງ ທັງໃນໂທລະສັບ ແລະ ຄອມພິວເຕີ.</p>
+            </div>
+
+            ${
+              canNativePrompt
+                ? `<div class="p-3 rounded-2xl bg-accent-50 border border-accent-200 text-accent-900 text-xs font-medium">
+                     ✅ ບຣາວເຊີຂອງທ່ານພ້ອມສຳລັບການຕິດຕັ້ງໂດຍກົງ! ກົດປຸ່ມ <strong>"ຕິດຕັ້ງແອັບດຽວນີ້"</strong> ດ້ານລຸ່ມເພື່ອເປີດໜ້າຕ່າງຕິດຕັ້ງ.
+                   </div>`
+                : ''
+            }
+
+            <div class="space-y-2">
+              <div class="font-bold text-hub-950 text-xs uppercase tracking-wider">ວິທີເລືອກ "ຕິດຕັ້ງ" / "ເພີ່ມໜ້າຫຼັກ" / "ສ້າງທາງລັດ":</div>
+
+              <div class="p-3 rounded-2xl border border-hub-200 bg-white ${platform.isChrome || platform.isEdge || (!platform.isIOS && !platform.isAndroid) ? 'ring-2 ring-hub-400/50' : ''}">
+                <div class="font-bold text-hub-950 text-xs sm:text-sm">💻 ຄອມພິວເຕີ (Chrome / Edge):</div>
+                <p class="text-xs text-hub-700 mt-0.5">ກົດໄອຄອນຕິດຕັ້ງ <strong>(⊕ / 📥)</strong> ໃນແຖບທີ່ຢູ່ດ້ານເທິງຂວາ ຫຼື ໄປທີ່ເມນູ <strong>⋮</strong> (ຫຼື <strong>⋯</strong>) → ເລືອກ <strong>"Cast, save, and share"</strong> → <strong>"Install ເມນູນຳທາງ"</strong> ຫຼື <strong>"Create shortcut"</strong>.</p>
+              </div>
+
+              <div class="p-3 rounded-2xl border border-hub-200 bg-white ${platform.isAndroid ? 'ring-2 ring-hub-400/50' : ''}">
+                <div class="font-bold text-hub-950 text-xs sm:text-sm">📱 ໂທລະສັບ Android (Chrome / Samsung Internet):</div>
+                <p class="text-xs text-hub-700 mt-0.5">ກົດປຸ່ມເມນູ <strong>⋮</strong> ມุมຂວາເທິງ → ເລືອກ <strong>"Add to Home screen"</strong> (ເພີ່ມໃສ່ໜ້າຈໍຫຼັກ) ຫຼື <strong>"Install app"</strong> (ຕິດຕັ້ງແອັບ).</p>
+              </div>
+
+              <div class="p-3 rounded-2xl border border-hub-200 bg-white ${platform.isIOS ? 'ring-2 ring-hub-400/50' : ''}">
+                <div class="font-bold text-hub-950 text-xs sm:text-sm">🍎 iPhone / iPad (Safari):</div>
+                <p class="text-xs text-hub-700 mt-0.5">ກົດປຸ່ມແຊຣ໌ <strong>(Share / ⎋)</strong> ຢູ່ແຖບລຸ່ມ (ຫຼື ມุมເທິງ) → ເລື່ອນລົງແລ້ວເລືອກ <strong>"Add to Home Screen"</strong> (ເພີ່ມໃສ່ໜ້າຈໍຫຼັກ) → ກົດ <strong>Add</strong>.</p>
+              </div>
+            </div>
+          </div>
+        `,
+        onPrimary: () => {
+          if (canNativePrompt) {
+            triggerNativeInstallPrompt();
+          }
+        },
+      });
+    }
+
+    async function triggerNativeInstallPrompt() {
+      const promptEvent = state.deferredInstallPrompt;
+      if (!promptEvent) {
+        openInstallGuideModal();
+        return;
+      }
+
+      try {
+        promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        state.deferredInstallPrompt = null;
+        if (choice && choice.outcome === 'accepted') {
+          state.installOutcome = 'accepted';
+          showToast('ກຳລັງຕິດຕັ້ງແອັບ "ເມນູນຳທາງ" ໃສ່ອຸປະກອນຂອງທ່ານ...');
+        } else {
+          state.installOutcome = 'dismissed';
+          showToast('ຍົກເລີກການຕິດຕັ້ງ — ທ່ານສາມາດຕິດຕັ້ງໄດ້ທຸກເວລາ');
+        }
+        render();
+      } catch (_) {
+        state.deferredInstallPrompt = null;
+        openInstallGuideModal();
+      }
+    }
+
+    function renderPwaInstallBadgeOrButton(compact = false) {
+      if (state.isStandaloneApp) {
+        return `
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-accent-600/20 text-accent-300 border border-accent-400/40 shrink-0"
+            title="ແອັບກຳລັງເຮັດວຽກໃນໂໝດ Standalone"
+          >
+            <span class="w-2 h-2 rounded-full bg-accent-400"></span>
+            <span>${compact ? 'ຕິດຕັ້ງແລ້ວ' : 'ຕິດຕັ້ງແລ້ວ (ໂໝດແອັບ)'}</span>
+          </span>
+        `;
+      }
+
+      return `
+        <button
+          type="button"
+          id="${compact ? 'pwa-install-btn-compact' : 'pwa-install-btn'}"
+          class="pwa-trigger-btn inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-accent-500 hover:bg-accent-600 text-white shadow-sm transition cursor-pointer shrink-0"
+          title="ຕິດຕັ້ງເປັນແອັບ ຫຼື ສ້າງທາງລັດ"
+        >
+          <span>📲</span>
+          <span>${compact ? 'ຕິດຕັ້ງ' : 'ຕິດຕັ້ງແອັບ'}</span>
+        </button>
+      `;
+    }
+
+    // --- Helpers ---
+    function escapeHTML(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      container.innerHTML = `
+        <div class="animate-toast bg-hub-950 text-white px-4 py-2.5 rounded-full shadow-xl text-xs sm:text-sm font-medium flex items-center gap-2 border border-hub-700/70 whitespace-nowrap">
+          <span class="w-2 h-2 rounded-full bg-accent-500"></span>
+          <span>${escapeHTML(message)}</span>
+        </div>
+      `;
+    }
+
+    function openModal({ title, bodyHTML, primaryText = 'ຕົກລົງ', secondaryText = null, onPrimary = null }) {
+      const backdrop = document.getElementById('modal-backdrop');
+      const box = document.getElementById('modal-box');
+      if (!backdrop || !box) return;
+
+      box.innerHTML = `
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <h3 class="text-lg font-bold text-hub-950">${escapeHTML(title)}</h3>
+          <button id="modal-close-x" class="p-1.5 rounded-xl text-hub-700 hover:bg-hub-100 transition cursor-pointer" aria-label="ປິດ">✕</button>
+        </div>
+        <div class="text-sm text-hub-800 space-y-3 mb-6">${bodyHTML}</div>
+        <div class="flex items-center justify-end gap-2.5">
+          ${secondaryText ? `<button id="modal-secondary-btn" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-hub-800 bg-hub-100 hover:bg-hub-200 transition cursor-pointer">${escapeHTML(secondaryText)}</button>` : ''}
+          <button id="modal-primary-btn" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-hub-600 hover:bg-hub-700 shadow-md transition cursor-pointer">${escapeHTML(primaryText)}</button>
+        </div>
+      `;
+
+      backdrop.classList.remove('hidden');
+      backdrop.classList.add('flex');
+
+      const closeModal = () => {
+        backdrop.classList.add('hidden');
+        backdrop.classList.remove('flex');
+      };
+
+      document.getElementById('modal-close-x').onclick = closeModal;
+      if (secondaryText) {
+        document.getElementById('modal-secondary-btn').onclick = closeModal;
+      }
+      document.getElementById('modal-primary-btn').onclick = () => {
+        if (typeof onPrimary === 'function') onPrimary();
+        closeModal();
+      };
+      backdrop.onclick = (e) => {
+        if (e.target === backdrop) closeModal();
+      };
+    }
+
+    function computeEffectiveDesktop() {
+      if (state.viewportMode === 'phone') return false;
+      if (state.viewportMode === 'desktop') return true;
+      return window.innerWidth >= 768;
+    }
+
+    function setViewportMode(mode) {
+      state.viewportMode = mode;
+      state.isDesktopEffective = computeEffectiveDesktop();
+      // When switching to desktop, ensure a valid page is selected
+      if (state.isDesktopEffective && !state.desktopSelectedPageId) {
+        state.desktopSelectedPageId = state.activePageId || 'web-home';
+      }
+      render();
+      const labels = {
+        auto: 'ໂໝດ ອັດຕະໂນມັດ (ຕາມຂະໜາດໜ້າຈໍ)',
+        phone: 'ໂໝດ ໂທລະສັບມືຖື (Mobile Menu Hub)',
+        desktop: 'ໂໝດ ຄອມພິວເຕີ (Desktop Workspace)'
+      };
+      showToast(labels[mode] || mode);
+    }
+
+    function navigateToPage(pageId) {
+      const { group, page } = findPageContext(pageId);
+      state.activePageId = page.id;
+      state.desktopSelectedPageId = page.id;
+      state.expandedDesktopGroups[group.id] = true;
+      render();
+      showToast(`ເປີດໜ້າ "${group.title} › ${page.title}"`);
+    }
+
+    function backToMobileMenuHome() {
+      state.activePageId = null;
+      render();
+    }
+
+    // --- Filtered Menu Groups / Items for Search & Group Tabs ---
+    function getFilteredMenuGroups() {
+      const q = state.searchQuery.trim().toLowerCase();
+      return MENU_GROUPS
+        .filter((grp) => state.activeGroupId === 'all' || grp.id === state.activeGroupId)
+        .map((grp) => {
+          const matchingPages = grp.pages.filter((p) => {
+            if (!q) return true;
+            return (
+              p.title.toLowerCase().includes(q) ||
+              p.subtitle.toLowerCase().includes(q) ||
+              p.summary.toLowerCase().includes(q) ||
+              grp.title.toLowerCase().includes(q)
+            );
+          });
+          return { ...grp, pages: matchingPages };
+        })
+        .filter((grp) => grp.pages.length > 0 || !q);
+    }
+
+    // --- Shared Sub-Page Detail View (Used on Mobile sub-page & Desktop main workspace) ---
+    function renderSubPageDetail(page, group, isMobile = false) {
+      return `
+        <div class="animate-page-in space-y-4">
+          <!-- Breadcrumb & Back Button -->
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-1.5 text-xs text-hub-600 flex-wrap">
+              ${
+                isMobile
+                  ? `<button type="button" id="mobile-back-btn" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-hub-200 text-hub-900 font-bold shadow-2xs hover:bg-hub-50 transition cursor-pointer">
+                       <span>←</span>
+                       <span>ກັບຄືນ</span>
+                     </button>`
+                  : `<button type="button" data-nav-page="web-home" class="nav-page-btn hover:text-hub-900 font-medium cursor-pointer">ໜ້າຫຼັກ</button>
+                     <span>›</span>`
+              }
+              <span class="font-semibold text-hub-700">${escapeHTML(group.title)}</span>
+              <span>›</span>
+              <span class="font-bold text-hub-950">${escapeHTML(page.title)}</span>
+            </div>
+
+            <span class="text-[11px] font-bold px-2.5 py-1 rounded-full border ${group.badgeColor}">
+              ${escapeHTML(page.badge)}
+            </span>
+          </div>
+
+          <!-- Hero Banner Card for Selected Sub-Page -->
+          <div class="rounded-3xl bg-gradient-to-br ${group.accentBg} text-white p-5 sm:p-6 shadow-card relative overflow-hidden">
+            <div class="relative z-10 flex items-start justify-between gap-4">
+              <div class="space-y-1.5">
+                <div class="inline-flex items-center gap-1.5 text-xs font-medium bg-white/15 backdrop-blur-xs px-3 py-1 rounded-full border border-white/20">
+                  <span>${group.icon}</span>
+                  <span>${escapeHTML(group.title)}</span>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2.5 pt-1">
+                  <span class="text-2xl sm:text-3xl">${page.icon}</span>
+                  <span>${escapeHTML(page.title)}</span>
+                </h1>
+                <p class="text-xs sm:text-sm text-white/90 max-w-2xl leading-relaxed">${escapeHTML(page.subtitle)}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary Card -->
+          <div class="bg-white rounded-3xl p-4 sm:p-5 border border-hub-200/75 shadow-soft">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-hub-500 mb-1.5">ລາຍລະອຽດໜ້າ</h2>
+            <p class="text-sm text-hub-800 leading-relaxed">${escapeHTML(page.summary)}</p>
+          </div>
+
+          <!-- Key Metrics Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            ${page.stats
+              .map(
+                (st) => `
+                <div class="bg-white rounded-2xl p-4 border border-hub-200/75 shadow-soft">
+                  <div class="text-xs text-hub-600 font-medium">${escapeHTML(st.label)}</div>
+                  <div class="text-lg sm:text-xl font-extrabold text-hub-950 mt-1">${escapeHTML(st.value)}</div>
+                  <div class="inline-block mt-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-accent-50 text-accent-700 border border-accent-100">
+                    ${escapeHTML(st.delta)}
+                  </div>
+                </div>
+              `
+              )
+              .join('')}
+          </div>
+
+          <!-- Highlights / Records List -->
+          <div class="bg-white rounded-3xl p-4 sm:p-5 border border-hub-200/75 shadow-soft space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-bold text-hub-950">ລາຍການສຳຄັນໃນໜ້ານີ້</h2>
+              <span class="text-xs text-hub-500">${page.highlights.length} ລາຍການ</span>
+            </div>
+            <div class="divide-y divide-hub-100">
+              ${page.highlights
+                .map(
+                  (hl) => `
+                  <div class="py-3 first:pt-1 last:pb-1 flex items-start justify-between gap-3">
+                    <div class="space-y-0.5">
+                      <div class="text-sm font-bold text-hub-950">${escapeHTML(hl.title)}</div>
+                      <div class="text-xs text-hub-600 leading-relaxed">${escapeHTML(hl.detail)}</div>
+                    </div>
+                    <span class="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-hub-100 text-hub-800">
+                      ${escapeHTML(hl.status)}
+                    </span>
+                  </div>
+                `
+                )
+                .join('')}
+            </div>
+          </div>
+
+          <!-- Quick Navigation Actions to Other Pages -->
+          <div class="flex flex-wrap items-center gap-2.5 pt-1">
+            ${page.actions
+              .map((act) => {
+                if (act.isMessageTrigger) {
+                  return `
+                    <button type="button" id="open-contact-form-btn" class="px-4 py-2.5 rounded-2xl bg-hub-600 hover:bg-hub-700 text-white text-xs sm:text-sm font-bold shadow-sm transition cursor-pointer">
+                      ✉️ ${escapeHTML(act.label)}
+                    </button>
+                  `;
+                }
+                return `
+                  <button
+                    type="button"
+                    data-nav-page="${escapeHTML(act.targetPageId)}"
+                    class="nav-page-btn px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition cursor-pointer ${
+                      act.primary
+                        ? 'bg-hub-600 hover:bg-hub-700 text-white shadow-sm'
+                        : 'bg-white hover:bg-hub-100 text-hub-900 border border-hub-200'
+                    }"
+                  >
+                    ${act.primary ? '→ ' : ''}${escapeHTML(act.label)}
+                  </button>
+                `;
+              })
+              .join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // --- Render Top Viewport Switcher Bar ---
+    function renderViewportSwitcher() {
+      const modes = [
+        { id: 'auto', label: 'ອັດຕະໂນມັດ', icon: '⚡' },
+        { id: 'phone', label: 'ໂທລະສັບ', icon: '📱' },
+        { id: 'desktop', label: 'ຄອມພິວເຕີ', icon: '💻' },
+      ];
+
+      return `
+        <header class="pwa-switcher-wrap sticky top-0 z-40 bg-hub-950 text-white border-b border-hub-800/80 shadow-md">
+          <div class="max-w-[1440px] mx-auto px-3 sm:px-6 h-[68px] flex items-center justify-between gap-2">
+            <!-- Brand Title -->
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-hub-400 to-hub-600 flex items-center justify-center text-lg shadow-inner shrink-0">
+                🧭
+              </div>
+              <div class="truncate">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-sm sm:text-base tracking-wide truncate">ສູນລວມເມນູນຳທາງ</span>
+                  <span class="hidden lg:inline-flex text-[11px] px-2 py-0.5 rounded-full bg-hub-800 text-hub-200 border border-hub-700">
+                    ${state.isDesktopEffective ? 'ມຸມມອງຄອມພິວເຕີ' : 'ມຸມມອງໂທລະສັບ'}
+                  </span>
+                </div>
+                <p class="text-[11px] text-hub-300 hidden sm:block">ເມນູເວັບໄຊ • ເມນູຈັດຫາພະນັກງານ • ເມນູຮ້ານ</p>
+              </div>
+            </div>
+
+            <!-- Right Controls: Install / Shortcut Action + Viewport Mode Toggle -->
+            <div class="flex items-center gap-2 shrink-0">
+              ${renderPwaInstallBadgeOrButton(!state.isDesktopEffective)}
+
+              <!-- Interactive Viewport Mode Toggle -->
+              <div class="flex items-center bg-hub-900 p-1 rounded-2xl border border-hub-700/80" role="group" aria-label="ເລືອກຮູບແບບໜ້າຈໍ">
+                ${modes
+                  .map((m) => {
+                    const active = state.viewportMode === m.id;
+                    return `
+                      <button
+                        type="button"
+                        data-vp-mode="${m.id}"
+                        class="vp-btn px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                          active
+                            ? 'bg-hub-500 text-white shadow-sm font-semibold'
+                            : 'text-hub-300 hover:text-white hover:bg-hub-800/70'
+                        }"
+                      >
+                        <span>${m.icon}</span>
+                        <span class="hidden sm:inline">${m.label}</span>
+                        <span class="sm:hidden">${m.id === 'auto' ? 'Auto' : m.id === 'phone' ? 'ມືຖື' : 'PC'}</span>
+                      </button>
+                    `;
+                  })
+                  .join('')}
+              </div>
+            </div>
+          </div>
+        </header>
+      `;
+    }
+
+    // --- Render Mobile Phone Menu Hub UI (<768px or 'phone' mode) ---
+    function renderMobilePhoneUI() {
+      // If a sub-page is opened on mobile, render full-screen sub-page view with back button
+      if (state.activePageId) {
+        const { group, page } = findPageContext(state.activePageId);
+        return `
+          <div class="w-full bg-hub-50 min-h-full flex flex-col pb-20">
+            ${
+              state.viewportMode === 'phone'
+                ? `<div class="bg-hub-950 text-hub-200 text-[11px] px-5 pt-2 pb-1.5 flex items-center justify-between select-none">
+                     <span class="font-semibold">09:41</span>
+                     <span class="w-20 h-3.5 bg-black rounded-full inline-block border border-hub-800"></span>
+                     <span>5G • 100%</span>
+                   </div>`
+                : ''
+            }
+            <div class="p-4 flex-1">
+              ${renderSubPageDetail(page, group, true)}
+            </div>
+            ${renderMobileBottomNav('active-page')}
+          </div>
+        `;
+      }
+
+      // Otherwise render the Mobile Menu Hub Home Launcher
+      const filteredGroups = getFilteredMenuGroups();
+
+      return `
+        <div class="w-full bg-hub-50 min-h-full flex flex-col pb-24">
+          ${
+            state.viewportMode === 'phone'
+              ? `<div class="bg-hub-950 text-hub-200 text-[11px] px-5 pt-2 pb-1.5 flex items-center justify-between select-none">
+                   <span class="font-semibold">09:41</span>
+                   <span class="w-20 h-3.5 bg-black rounded-full inline-block border border-hub-800"></span>
+                   <span>5G • 100%</span>
+                 </div>`
+              : ''
+          }
+
+          <!-- Mobile Hub Hero Header -->
+          <div class="bg-gradient-to-br from-hub-800 via-hub-700 to-hub-950 text-white px-4 pt-4 pb-5 rounded-b-[28px] shadow-md">
+            <div class="mb-3 flex items-start justify-between gap-2">
+              <div>
+                <p class="text-[11px] text-hub-200 font-medium">ເລືອກໝວດ ແລະ ກົດເຂົ້າໜ້າທີ່ຕ້ອງການ</p>
+                <h1 class="text-xl font-bold tracking-tight">ເມນູນຳທາງທັງໝົດ</h1>
+              </div>
+              ${
+                state.isStandaloneApp
+                  ? `<span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-accent-500/20 text-accent-200 border border-accent-400/40 shrink-0">ຕິດຕັ້ງແລ້ວ (ໂໝດແອັບ)</span>`
+                  : `<button type="button" class="pwa-trigger-btn text-[11px] font-bold px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/25 transition cursor-pointer shrink-0">📲 ສ້າງທາງລັດ / ຕິດຕັ້ງ</button>`
+              }
+            </div>
+
+            <!-- Search Box -->
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-hub-400 text-sm">🔍</span>
+              <input
+                type="text"
+                id="mobile-hub-search"
+                value="${escapeHTML(state.searchQuery)}"
+                placeholder="ຄົ້ນຫາໜ້າ ເຊັ່ນ: ບໍລິການ, ຮັບສະໝັກ, ຍອດຂາຍ..."
+                class="w-full pl-9 pr-8 py-2.5 rounded-2xl bg-white text-hub-950 placeholder-hub-400 text-sm focus:outline-none focus:ring-2 focus:ring-hub-300 shadow-xs"
+              />
+              ${
+                state.searchQuery
+                  ? `<button type="button" id="mobile-hub-clear-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-hub-500 hover:text-hub-900 text-xs font-bold">✕</button>`
+                  : ''
+              }
+            </div>
+          </div>
+
+          <!-- Group Filter Pills -->
+          <div class="px-3 pt-3.5 pb-2">
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              ${[
+                { id: 'all', label: 'ທັງໝົດ', icon: '🗂️' },
+                ...MENU_GROUPS.map((g) => ({ id: g.id, label: g.title, icon: g.icon }))
+              ].map((pill) => {
+                const active = state.activeGroupId === pill.id;
+                return `
+                  <button
+                    type="button"
+                    data-group-filter="${pill.id}"
+                    class="group-filter-btn shrink-0 px-3.5 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border ${
+                      active
+                        ? 'bg-hub-600 text-white border-hub-600 shadow-sm'
+                        : 'bg-white text-hub-800 border-hub-200 hover:bg-hub-100'
+                    }"
+                  >
+                    <span>${pill.icon}</span>
+                    <span>${escapeHTML(pill.label)}</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Grouped Menu Tiles for Mobile -->
+          <div class="px-4 py-2 space-y-5">
+            ${
+              filteredGroups.length === 0
+                ? `<div class="bg-white rounded-3xl p-8 text-center border border-hub-200 shadow-soft">
+                     <div class="text-4xl mb-2">🔎</div>
+                     <p class="font-bold text-hub-900 mb-1">ບໍ່ພົບເມນູທີ່ຄົ້ນຫາ</p>
+                     <p class="text-xs text-hub-600 mb-4">ລອງປ່ຽນຄຳຄົ້ນຫາ ຫຼື ເລືອກໝວດທັງໝົດ</p>
+                     <button type="button" id="mobile-reset-hub-btn" class="px-4 py-2 rounded-xl bg-hub-600 text-white text-xs font-semibold">ສະແດງທັງໝົດ</button>
+                   </div>`
+                : filteredGroups
+                    .map(
+                      (grp) => `
+                      <section class="space-y-2.5">
+                        <div class="flex items-center justify-between px-1">
+                          <div class="flex items-center gap-2">
+                            <span class="text-lg">${grp.icon}</span>
+                            <div>
+                              <h2 class="text-sm font-bold text-hub-950">${escapeHTML(grp.title)}</h2>
+                              <p class="text-[11px] text-hub-600">${escapeHTML(grp.subtitle)}</p>
+                            </div>
+                          </div>
+                          <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full border ${grp.badgeColor}">
+                            ${grp.pages.length} ໜ້າ
+                          </span>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-2.5">
+                          ${grp.pages
+                            .map(
+                              (pg) => `
+                              <button
+                                type="button"
+                                data-nav-page="${escapeHTML(pg.id)}"
+                                class="nav-page-btn w-full text-left bg-white hover:bg-hub-50/80 active:scale-[0.99] rounded-2xl p-3.5 border border-hub-200/80 shadow-soft flex items-center justify-between gap-3 transition cursor-pointer"
+                              >
+                                <div class="flex items-center gap-3 min-w-0">
+                                  <div class="w-11 h-11 rounded-2xl bg-hub-100 text-xl flex items-center justify-center shrink-0">
+                                    ${pg.icon}
+                                  </div>
+                                  <div class="min-w-0">
+                                    <div class="flex items-center gap-2">
+                                      <span class="text-sm font-bold text-hub-950 truncate">${escapeHTML(pg.title)}</span>
+                                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-hub-100 text-hub-700 shrink-0">${escapeHTML(pg.badge)}</span>
+                                    </div>
+                                    <p class="text-xs text-hub-600 line-clamp-1 mt-0.5">${escapeHTML(pg.subtitle)}</p>
+                                  </div>
+                                </div>
+                                <span class="text-hub-400 font-bold text-base shrink-0">›</span>
+                              </button>
+                            `
+                            )
+                            .join('')}
+                        </div>
+                      </section>
+                    `
+                    )
+                    .join('')
+            }
+          </div>
+
+          ${renderMobileBottomNav('home')}
+        </div>
+      `;
+    }
+
+    function renderMobileBottomNav(activeMode) {
+      const navItems = [
+        { id: 'home', label: 'ເມນູຫຼັກ', icon: '🗂️', pageId: null },
+        { id: 'website', label: 'ເວັບໄຊ', icon: '🌐', pageId: 'web-home' },
+        { id: 'hr', label: 'ພະນັກງານ', icon: '👥', pageId: 'hr-jobs' },
+        { id: 'store', label: 'ຮ້ານ', icon: '🏪', pageId: 'store-products' },
+      ];
+
+      const currentGroupId = state.activePageId ? findPageContext(state.activePageId).group.id : 'home';
+
+      return `
+        <nav aria-label="ແຖບນຳທາງລຸ່ມ" class="fixed bottom-0 left-0 right-0 z-30 ${state.viewportMode === 'phone' ? 'max-w-[392px] mx-auto mb-2 rounded-2xl' : ''} bg-white/95 backdrop-blur-md border-t border-hub-200 px-2 py-1.5 shadow-lg">
+          <div class="grid grid-cols-4 gap-1">
+            ${navItems
+              .map((ni) => {
+                const isActive =
+                  (activeMode === 'home' && ni.id === 'home') ||
+                  (activeMode !== 'home' && ni.id === currentGroupId);
+                return `
+                  <button
+                    type="button"
+                    data-bottom-nav="${ni.id}"
+                    data-target-page="${ni.pageId || ''}"
+                    class="bottom-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-semibold transition cursor-pointer ${
+                      isActive ? 'bg-hub-100 text-hub-700 font-bold' : 'text-hub-600 hover:bg-hub-50'
+                    }"
+                  >
+                    <span class="text-base leading-none mb-0.5">${ni.icon}</span>
+                    <span>${escapeHTML(ni.label)}</span>
+                  </button>
+                `;
+              })
+              .join('')}
+          </div>
+        </nav>
+      `;
+    }
+
+    // --- Render Full Desktop / Computer Menu Hub UI (>=768px or 'desktop' mode) ---
+    function renderDesktopUI() {
+      const { group: activeGroup, page: activePage } = findPageContext(state.desktopSelectedPageId || 'web-home');
+      const filteredGroups = getFilteredMenuGroups();
+
+      return `
+        <div class="flex-1 max-w-[1440px] w-full mx-auto grid grid-cols-12 min-h-[calc(100vh-68px)] bg-hub-50">
+          <!-- Left Persistent Navigation Sidebar (4 cols on md, 3 cols on xl) -->
+          <aside class="col-span-4 xl:col-span-3 bg-white border-r border-hub-200/80 flex flex-col justify-between sticky top-[68px] h-[calc(100vh-68px)] overflow-y-auto">
+            <div class="p-4 space-y-4">
+              <!-- Sidebar Search -->
+              <div>
+                <div class="text-xs font-bold text-hub-500 uppercase tracking-wider px-1 mb-2">ຄົ້ນຫາເມນູນຳທາງ</div>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-hub-400 text-sm">🔍</span>
+                  <input
+                    type="text"
+                    id="desktop-hub-search"
+                    value="${escapeHTML(state.searchQuery)}"
+                    placeholder="ຄົ້ນຫາໜ້າຕ່າງໆ..."
+                    class="w-full pl-9 pr-7 py-2 rounded-xl bg-hub-50 border border-hub-200 text-xs text-hub-950 placeholder-hub-400 focus:outline-none focus:ring-2 focus:ring-hub-400"
+                  />
+                  ${
+                    state.searchQuery
+                      ? `<button type="button" id="desktop-hub-clear-search" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-hub-500 hover:text-hub-900 text-xs font-bold">✕</button>`
+                      : ''
+                  }
+                </div>
+              </div>
+
+              <!-- Grouped Navigation Tree (ເມນູເວັບໄຊ, ເມນູຈັດຫາພະນັກງານ, ເມນູຮ້ານ) -->
+              <div class="space-y-3">
+                ${filteredGroups
+                  .map((grp) => {
+                    const isExpanded = state.expandedDesktopGroups[grp.id] !== false;
+                    return `
+                      <div class="rounded-2xl border border-hub-200/70 bg-hub-50/40 overflow-hidden">
+                        <!-- Group Accordion Header -->
+                        <button
+                          type="button"
+                          data-toggle-group="${grp.id}"
+                          class="toggle-group-btn w-full px-3 py-2.5 bg-hub-100/70 hover:bg-hub-100 flex items-center justify-between text-left transition cursor-pointer"
+                        >
+                          <span class="flex items-center gap-2 text-xs font-bold text-hub-950">
+                            <span class="text-base">${grp.icon}</span>
+                            <span>${escapeHTML(grp.title)}</span>
+                          </span>
+                          <span class="text-xs text-hub-600 font-bold">${isExpanded ? '▾' : '▸'}</span>
+                        </button>
+
+                        <!-- Sub-page Links -->
+                        ${
+                          isExpanded
+                            ? `<div class="p-1.5 space-y-1 bg-white">
+                                 ${grp.pages
+                                   .map((pg) => {
+                                     const isSelected = pg.id === activePage.id;
+                                     return `
+                                       <button
+                                         type="button"
+                                         data-nav-page="${escapeHTML(pg.id)}"
+                                         class="nav-page-btn w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
+                                           isSelected
+                                             ? 'bg-hub-600 text-white font-bold shadow-xs'
+                                             : 'text-hub-800 hover:bg-hub-100/80'
+                                         }"
+                                       >
+                                         <span class="flex items-center gap-2 truncate">
+                                           <span>${pg.icon}</span>
+                                           <span class="truncate">${escapeHTML(pg.title)}</span>
+                                         </span>
+                                         <span class="text-[10px] px-1.5 py-0.5 rounded-md shrink-0 ${
+                                           isSelected ? 'bg-white/20 text-white' : 'bg-hub-100 text-hub-700'
+                                         }">${escapeHTML(pg.badge)}</span>
+                                       </button>
+                                     `;
+                                   })
+                                   .join('')}
+                               </div>`
+                            : ''
+                        }
+                      </div>
+                    `;
+                  })
+                  .join('')}
+              </div>
+            </div>
+
+            <!-- Sidebar Footer Quick Group Switcher -->
+            <div class="p-4 border-t border-hub-200/80 bg-hub-50/70 text-xs text-hub-600">
+              <div class="font-semibold text-hub-800 mb-1">ທາງລັດ 3 ໝວດຫຼັກ</div>
+              <div class="flex items-center gap-1.5">
+                <button type="button" data-nav-page="web-home" class="nav-page-btn flex-1 py-1.5 rounded-lg bg-white border border-hub-200 hover:bg-hub-100 font-semibold text-hub-900 cursor-pointer">🌐 ເວັບໄຊ</button>
+                <button type="button" data-nav-page="hr-jobs" class="nav-page-btn flex-1 py-1.5 rounded-lg bg-white border border-hub-200 hover:bg-hub-100 font-semibold text-hub-900 cursor-pointer">👥 HR</button>
+                <button type="button" data-nav-page="store-products" class="nav-page-btn flex-1 py-1.5 rounded-lg bg-white border border-hub-200 hover:bg-hub-100 font-semibold text-hub-900 cursor-pointer">🏪 ຮ້ານ</button>
+              </div>
+            </div>
+          </aside>
+
+          <!-- Main Desktop Content Workspace (8 cols on md, 9 cols on xl) -->
+          <main class="col-span-8 xl:col-span-9 p-6 lg:p-8 overflow-y-auto space-y-6">
+            <!-- Install / App Shortcut Banner on Desktop -->
+            <div class="bg-white rounded-3xl px-5 py-3.5 border border-hub-200/80 shadow-soft flex items-center justify-between gap-4 flex-wrap">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-hub-100 flex items-center justify-center text-xl shrink-0">📲</div>
+                <div>
+                  <div class="text-sm font-bold text-hub-950">
+                    ${
+                      state.isStandaloneApp
+                        ? 'ຕິດຕັ້ງແລ້ວ (ໂໝດແອັບ) — ສູນລວມເມນູນຳທາງ'
+                        : 'ຕິດຕັ້ງເປັນແອັບ ຫຼື ສ້າງທາງລັດໄວ້ເທິງໜ້າຈໍຄອມພິວເຕີ / ໂທລະສັບ'
+                    }
+                  </div>
+                  <div class="text-xs text-hub-600">
+                    ${
+                      state.isStandaloneApp
+                        ? 'ທ່ານກຳລັງເປີດໃຊ້ງານໃນຮູບແບບແອັບ Standalone ແບບເຕັມໜ້າຈໍ'
+                        : 'ເປີດເຂົ້າເມນູເວັບໄຊ, ເມນູຈັດຫາພະນັກງານ ແລະ ເມນູຮ້ານ ໄດ້ທັນທີໂດຍບໍ່ຕ້ອງເປີດບຣາວເຊີຫຼາຍຂັ້ນຕອນ'
+                    }
+                  </div>
+                </div>
+              </div>
+              ${
+                state.isStandaloneApp
+                  ? `<span class="text-xs font-bold px-3 py-1.5 rounded-xl bg-accent-100 text-accent-700 border border-accent-200">✓ ຕິດຕັ້ງແລ້ວ (ໂໝດແອັບ)</span>`
+                  : `<button type="button" class="pwa-trigger-btn px-4 py-2 rounded-xl bg-hub-600 hover:bg-hub-700 text-white text-xs font-bold shadow-xs transition cursor-pointer">ຕິດຕັ້ງ / ສ້າງທາງລັດ</button>`
+              }
+            </div>
+
+            <!-- Top Quick Menu Hub Strip Across All 3 Groups -->
+            <div class="bg-white rounded-3xl p-3.5 border border-hub-200/75 shadow-soft">
+              <div class="flex items-center justify-between gap-2 mb-2.5 px-1">
+                <span class="text-xs font-bold text-hub-700">ເມນູນຳທາງດ່ວນ (ກົດເພື່ອປ່ຽນໜ້າ):</span>
+                <span class="text-[11px] text-hub-500">ກຳລັງເປີດ: <strong class="text-hub-900">${escapeHTML(activeGroup.title)} › ${escapeHTML(activePage.title)}</strong></span>
+              </div>
+              <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                ${MENU_GROUPS.flatMap((g) => g.pages)
+                  .map((pg) => {
+                    const isCurrent = pg.id === activePage.id;
+                    return `
+                      <button
+                        type="button"
+                        data-nav-page="${escapeHTML(pg.id)}"
+                        class="nav-page-btn shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border ${
+                          isCurrent
+                            ? 'bg-hub-950 text-white border-hub-950 shadow-2xs'
+                            : 'bg-hub-50 text-hub-800 border-hub-200/80 hover:bg-hub-100'
+                        }"
+                      >
+                        <span>${pg.icon}</span>
+                        <span>${escapeHTML(pg.title)}</span>
+                      </button>
+                    `;
+                  })
+                  .join('')}
+              </div>
+            </div>
+
+            <!-- Active Sub-Page Content -->
+            ${renderSubPageDetail(activePage, activeGroup, false)}
+          </main>
+        </div>
+      `;
+    }
+
+    // --- Render & Event Binding ---
+    function render() {
+      state.isDesktopEffective = computeEffectiveDesktop();
+      const root = document.getElementById('app');
+      if (!root) return;
+
+      const activeEl = document.activeElement;
+      const isSearch = activeEl && (activeEl.id === 'mobile-hub-search' || activeEl.id === 'desktop-hub-search');
+      const cursorPos = isSearch ? activeEl.selectionStart : null;
+      const focusedId = isSearch ? activeEl.id : null;
+
+      let bodyContent = '';
+      if (state.isDesktopEffective) {
+        bodyContent = renderDesktopUI();
+      } else if (state.viewportMode === 'phone') {
+        bodyContent = `
+          <div class="forced-phone-wrapper">
+            <div class="forced-phone-frame">
+              ${renderMobilePhoneUI()}
+            </div>
+          </div>
+        `;
+      } else {
+        bodyContent = renderMobilePhoneUI();
+      }
+
+      root.innerHTML = `
+        ${renderViewportSwitcher()}
+        ${bodyContent}
+      `;
+
+      bindEvents();
+
+      if (focusedId) {
+        const nextInput = document.getElementById(focusedId);
+        if (nextInput) {
+          nextInput.focus();
+          if (cursorPos !== null) {
+            try {
+              nextInput.setSelectionRange(cursorPos, cursorPos);
+            } catch (_) {}
+          }
+        }
+      }
+    }
+
+    function bindEvents() {
+      // PWA install / shortcut triggers
+      document.querySelectorAll('.pwa-trigger-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (state.deferredInstallPrompt) {
+            triggerNativeInstallPrompt();
+          } else {
+            openInstallGuideModal();
+          }
+        });
+      });
+
+      // Viewport mode buttons
+      document.querySelectorAll('.vp-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          setViewportMode(btn.getAttribute('data-vp-mode'));
+        });
+      });
+
+      // Navigate to sub-page buttons
+      document.querySelectorAll('.nav-page-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const targetId = btn.getAttribute('data-nav-page');
+          if (targetId) navigateToPage(targetId);
+        });
+      });
+
+      // Mobile back button
+      const backBtn = document.getElementById('mobile-back-btn');
+      if (backBtn) {
+        backBtn.addEventListener('click', backToMobileMenuHome);
+      }
+
+      // Mobile group filter pills
+      document.querySelectorAll('.group-filter-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.activeGroupId = btn.getAttribute('data-group-filter') || 'all';
+          render();
+        });
+      });
+
+      // Mobile bottom navigation
+      document.querySelectorAll('.bottom-nav-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const navId = btn.getAttribute('data-bottom-nav');
+          const targetPage = btn.getAttribute('data-target-page');
+          if (navId === 'home') {
+            backToMobileMenuHome();
+          } else if (targetPage) {
+            navigateToPage(targetPage);
+          }
+        });
+      });
+
+      // Desktop accordion group toggle
+      document.querySelectorAll('.toggle-group-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const grpId = btn.getAttribute('data-toggle-group');
+          if (grpId) {
+            state.expandedDesktopGroups[grpId] = state.expandedDesktopGroups[grpId] === false ? true : false;
+            render();
+          }
+        });
+      });
+
+      // Search inputs (mobile & desktop)
+      const mobileSearch = document.getElementById('mobile-hub-search');
+      if (mobileSearch) {
+        mobileSearch.addEventListener('input', (e) => {
+          state.searchQuery = e.target.value;
+          render();
+        });
+      }
+      const desktopSearch = document.getElementById('desktop-hub-search');
+      if (desktopSearch) {
+        desktopSearch.addEventListener('input', (e) => {
+          state.searchQuery = e.target.value;
+          render();
+        });
+      }
+
+      // Clear search buttons
+      const mClear = document.getElementById('mobile-hub-clear-search');
+      if (mClear) {
+        mClear.addEventListener('click', () => {
+          state.searchQuery = '';
+          render();
+        });
+      }
+      const dClear = document.getElementById('desktop-hub-clear-search');
+      if (dClear) {
+        dClear.addEventListener('click', () => {
+          state.searchQuery = '';
+          render();
+        });
+      }
+
+      // Reset search button
+      const resetHubBtn = document.getElementById('mobile-reset-hub-btn');
+      if (resetHubBtn) {
+        resetHubBtn.addEventListener('click', () => {
+          state.searchQuery = '';
+          state.activeGroupId = 'all';
+          render();
+        });
+      }
+
+      // Contact message modal trigger
+      const contactBtn = document.getElementById('open-contact-form-btn');
+      if (contactBtn) {
+        contactBtn.addEventListener('click', () => {
+          openModal({
+            title: 'ສົ່ງຂໍ້ຄວາມຫາທີມງານ',
+            primaryText: 'ສົ່ງຂໍ້ຄວາມ',
+            secondaryText: 'ຍົກເລີກ',
+            bodyHTML: `
+              <div class="space-y-2.5">
+                <div>
+                  <label class="block text-xs font-semibold text-hub-800 mb-1">ຊື່ ແລະ ນາມສະກຸນ</label>
+                  <input id="msg-name" type="text" placeholder="ປ້ອນຊື່ຂອງທ່ານ..." class="w-full px-3 py-2 rounded-xl border border-hub-200 text-sm focus:outline-none focus:border-hub-500" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-hub-800 mb-1">ຫົວຂໍ້ / ລາຍລະອຽດ</label>
+                  <textarea id="msg-body" rows="3" placeholder="ພິມຂໍ້ຄວາມທີ່ຕ້ອງການສອບຖາມ..." class="w-full px-3 py-2 rounded-xl border border-hub-200 text-sm focus:outline-none focus:border-hub-500"></textarea>
+                </div>
+              </div>
+            `,
+            onPrimary: () => {
+              showToast('ສົ່ງຂໍ້ຄວາມຫາທີມງານສຳເລັດແລ້ວ');
+            }
+          });
+        });
+      }
+    }
+
+    // Listen to window resize for 'auto' responsive mode
+    window.addEventListener('resize', () => {
+      if (state.viewportMode === 'auto') {
+        const nextDesktop = window.innerWidth >= 768;
+        if (nextDesktop !== state.isDesktopEffective) {
+          state.isDesktopEffective = nextDesktop;
+          render();
+        }
+      }
+    });
+
+    // Capture native browser install prompt (Chrome / Edge / Android)
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      state.deferredInstallPrompt = e;
+      render();
+    });
+
+    // Detect completion when app is installed as a standalone app / shortcut
+    window.addEventListener('appinstalled', () => {
+      state.deferredInstallPrompt = null;
+      state.installOutcome = 'accepted';
+      detectStandaloneMode();
+      render();
+      showToast('ຕິດຕັ້ງແອັບ "ເມນູນຳທາງ" ສຳເລັດແລ້ວ!');
+    });
+
+    // React to display-mode changes (e.g., opening from home screen / shortcut)
+    if (window.matchMedia) {
+      const displayModeMq = window.matchMedia('(display-mode: standalone)');
+      const onDisplayModeChange = () => {
+        detectStandaloneMode();
+        render();
+      };
+      if (typeof displayModeMq.addEventListener === 'function') {
+        displayModeMq.addEventListener('change', onDisplayModeChange);
+      } else if (typeof displayModeMq.addListener === 'function') {
+        displayModeMq.addListener(onDisplayModeChange);
+      }
+    }
+
+    // Initial render
+    window.addEventListener('DOMContentLoaded', () => {
+      detectStandaloneMode();
+      setupDynamicPwaManifest();
+      registerDynamicServiceWorker();
+      render();
+    });
+  </script>
+</body>
+</html>
